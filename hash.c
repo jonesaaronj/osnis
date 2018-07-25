@@ -1,4 +1,6 @@
+#include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include "hash.h"
 
 int read(unsigned char buffer[], int offset, int size)
@@ -10,8 +12,55 @@ int read(unsigned char buffer[], int offset, int size)
     return size;
 }
 
-void GetJunkBlock(unsigned int blockCount, unsigned char id[], unsigned char discNumber, unsigned char garbageBlock[])
+int compareArrays(unsigned char a[], unsigned char b[], int len)
 {
+    int trigger = 3;
+
+    int i;
+    for ( i = 0; i < len; i++) {
+        if (a[i] != b[i]) {
+            trigger ^= 1;
+            break;
+        }
+    }
+    for ( i = 0; i < len; i++) {
+        if (a[i] != b[i]) {
+            trigger ^= 2;
+            break;
+        }
+    }
+    return trigger;
+}
+
+bool isJunk(unsigned char buffer[], unsigned char junk[], int len)
+{
+    int i;
+    for ( i = 0; i < len; i++) {
+        if (buffer[i] != junk[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/*
+ * Returns an array of "JUNK" repeated
+ */
+unsigned char * getZeroJunk()
+{
+    static unsigned char junk[] = {0};
+    unsigned char magic[] = "JUNK";
+    int i; char * p;
+    for ( i = 0, p = junk; i < sizeof(junk); i += sizeof(magic), p += sizeof(magic) ) {
+        memcpy(p, magic, sizeof(magic));
+    }
+
+    return junk;
+}
+
+unsigned char * getJunkBlock(unsigned int blockCount, unsigned char id[], unsigned char discNumber)
+{
+    static unsigned char garbageBlock[] = {0};
     unsigned int buffer[0x824] = {0};
     int i, j = 0;
     unsigned int sample = 0;
@@ -38,6 +87,8 @@ void GetJunkBlock(unsigned int blockCount, unsigned char id[], unsigned char dis
         garbageBlock[i + 3] = (unsigned char)buffer[j];
         i += 4;
     }
+
+    return garbageBlock;
 }
 
 void a10002710(unsigned int sample, unsigned int buffer[])
