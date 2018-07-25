@@ -3,6 +3,79 @@
 #include "hash.h"
 #include "partition.h"
 
+void blah1(char *file)
+{
+    FILE *f;
+
+    f = fopen(file, "rb");
+    unsigned char header[30];
+    fread(header, 1, 30, f);
+    struct gcm_info * gcmInfo = getGcmInfo(header);
+    fclose(f);
+
+    printf("Disc Id: %02x %02x %02x %02x\n", gcmInfo->id[0], gcmInfo->id[1], gcmInfo->id[3], gcmInfo->id[4]);
+    printf("Disc Number: %d\n", gcmInfo->disc_number);
+
+    f = fopen(file, "rb"); 
+    unsigned char buffer[0x40000];
+    unsigned int i = 0;
+    size_t read;
+    int dataCount = 0;
+    int junkCount = 0;
+    int uniformCount = 0;
+    while((read = fread(buffer, 1, 0x40000, f)) > 0) {
+
+        unsigned char * junk = getJunkBlock(i++, gcmInfo->id, gcmInfo->disc_number);
+        unsigned char * uniform = isUniform(buffer, read);
+
+        if(uniform != NULL) {
+            if (dataCount > 0){
+                printf("%0d blocks of data\n", dataCount);
+                dataCount = 0;
+            }
+            if (junkCount > 0) {
+                printf("%0d blocks of junk\n", junkCount);
+                junkCount = 0;
+            }
+            uniformCount++;
+        } else if (same(buffer, junk, 4)) {
+            if (dataCount > 0){
+                printf("%0d blocks of data\n", dataCount);
+                dataCount = 0;
+            }
+            if (uniformCount > 0){
+                printf("%0d blocks of uniform\n", uniformCount);
+                uniformCount = 0;
+            }
+            junkCount++;
+        } else {
+            if (junkCount > 0) {
+                printf("%0d blocks of junk\n", junkCount);
+                junkCount = 0;
+            }
+            if (uniformCount > 0){
+                printf("%0d blocks of uniform\n", uniformCount);
+                uniformCount = 0;
+            }
+            dataCount++;
+        }
+    }
+    if (dataCount > 0){
+        printf("%0d blocks of data\n", dataCount);
+        dataCount = 0;
+    }
+    if (junkCount > 0) {
+        printf("%0d blocks of junk\n", junkCount);
+        junkCount = 0;
+    }
+    if (uniformCount > 0){
+        printf("%0d blocks of uniform\n", uniformCount);
+        uniformCount = 0;
+    }
+
+    fclose(f);
+}
+
 void handleInputStream()
 {
     unsigned char buffer[1];
@@ -58,7 +131,8 @@ int main(int argc, char *argv[])
     }
 
     if (inputFile != NULL) {
-        handleInputFile(inputFile);
+        // handleInputFile(inputFile);
+        blah1(inputFile);
     } else {
         handleInputStream();
     }

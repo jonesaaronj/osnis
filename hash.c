@@ -1,71 +1,42 @@
+#include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include "hash.h"
 
-int read(unsigned char buffer[], int offset, int size)
-{
-    while (size > 0)
-    {
-        
-    }
-    return size;
-}
-
-int compareArrays(unsigned char a[], unsigned char b[], int len)
-{
-    int trigger = 3;
-
-    int i;
-    for ( i = 0; i < len; i++) {
-        if (a[i] != b[i]) {
-            trigger ^= 1;
-            break;
-        }
-    }
-    for ( i = 0; i < len; i++) {
-        if (a[i] != b[i]) {
-            trigger ^= 2;
-            break;
-        }
-    }
-    return trigger;
-}
-
-bool isJunk(unsigned char buffer[], unsigned char junk[], int len)
+bool same(unsigned char a[], unsigned char b[], int len)
 {
     int i;
     for ( i = 0; i < len; i++) {
-        if (buffer[i] != junk[i]) {
+        if (a[i] != b[i]) {
             return false;
         }
     }
     return true;
 }
 
-/*
- * Returns an array of "JUNK" repeated
- */
-unsigned char * getZeroJunk()
+unsigned char * isUniform(unsigned char data[], int len)
 {
-    static unsigned char junk[] = {0};
-    unsigned char magic[] = "JUNK";
-    int i; char * p;
-    for ( i = 0, p = junk; i < sizeof(junk); i += sizeof(magic), p += sizeof(magic) ) {
-        memcpy(p, magic, sizeof(magic));
+    int i;
+    unsigned char * a = &data[0];
+    for ( i = 0; i < len; i++) {
+        if (data[i] != *a) {
+            return NULL;
+        }
     }
-
-    return junk;
+    return a;
 }
 
 unsigned char * getJunkBlock(unsigned int blockCount, unsigned char id[], unsigned char discNumber)
 {
-    static unsigned char garbageBlock[] = {0};
+    static unsigned char garbageBlock[0x40000] = {0};
+    
     unsigned int buffer[0x824] = {0};
     int i, j = 0;
     unsigned int sample = 0;
 
     blockCount = blockCount * 8 * 0x1ef29123;
+    
     while (i != 0x40000) {
         if ((i & 0x00007fff) == 0) {
             sample = (((((unsigned int)id[2] << 0x8) | id[1]) << 0x10) | ((unsigned int)(id[3] + id[2]) << 0x8)) | (unsigned int)(id[0] + id[1]);
