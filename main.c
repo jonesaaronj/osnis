@@ -10,14 +10,13 @@ void profile(char *file)
     f = fopen(file, "rb");
     unsigned char header[32];
     fread(header, 1, 32, f);
-    struct gcm_info * gcmInfo = getGcmInfo(header);
+    struct disc_info * discInfo = getDiscInfo(header);
     fclose(f);
 
-    printf("Disc Id: %c%c%c%c%c%c\n", gcmInfo->id[0], gcmInfo->id[1], gcmInfo->id[2], gcmInfo->id[3], gcmInfo->id[4], gcmInfo->id[5]);
-    printf("Disc Number: %d\n", gcmInfo->disc_number);
-    printf("Magic Word: %02x %02x %02x %02x\n", gcmInfo->magic_word[0], gcmInfo->magic_word[1], gcmInfo->magic_word[2], gcmInfo->magic_word[3]);
-    bool isGcm = IsGCM(gcmInfo->magic_word);
-    printf("Is GCM: %s\n", isGcm ? "true" : "false");
+    printf("Disc Id: %c%c%c%c%c%c\n", discInfo->id[0], discInfo->id[1], discInfo->id[2], discInfo->id[3], discInfo->id[4], discInfo->id[5]);
+    printf("Disc Number: %d\n", discInfo->disc_number);
+    printf("Is GCM: %s\n", discInfo->isGCM ? "true" : "false");
+    printf("Is WII: %s\n", discInfo->isWII ? "true" : "false");
 
     f = fopen(file, "rb"); 
     unsigned char buffer[0x40000];
@@ -30,7 +29,7 @@ void profile(char *file)
 
     while((read = fread(buffer, 1, 0x40000, f)) > 0) {
 
-        unsigned char * junk = getJunkBlock(i++, gcmInfo->id, gcmInfo->disc_number);
+        unsigned char * junk = getJunkBlock(i++, discInfo->id, discInfo->disc_number);
         uniform = isUniform(buffer, read);
 
         if(uniform != NULL) {
@@ -115,29 +114,36 @@ int main(int argc, char *argv[])
     
     char *inputFile = NULL;
     char *outputFile = NULL;
+    bool doProfile = false;
 
     int opt;
-    while ((opt = getopt(argc, argv, "i:o:")) != -1) {
+    while ((opt = getopt(argc, argv, "i:o:p")) != -1) {
         switch (opt) {
-        case 'i':
-            inputFile = optarg; 
-            break;
-        case 'o': 
-            outputFile = optarg;
-            break;
-        case '?':
-            if (optopt == 'i' || optopt == 'i') {
-                fprintf (stderr, "Option -%c requires an argument.\n", optopt);
-            }            
-        default:
-            fprintf(stderr, "Usage: %s [-i inputFile] [-o outputFile]\n", argv[0]);
-            return 1;
-        }
+            case 'p':
+                doProfile = true;
+                break;
+            case 'i':
+                inputFile = optarg; 
+                break;
+            case 'o': 
+                outputFile = optarg;
+                break;
+            case '?':
+                if (optopt == 'i' || optopt == 'i') {
+                    fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+                }            
+            default:
+                fprintf(stderr, "Usage: %s [-i inputFile] [-o outputFile]\n", argv[0]);
+                return 1;
+            }
     }
 
     if (inputFile != NULL) {
-        // handleInputFile(inputFile);
-        profile(inputFile);
+        if (doProfile) {
+            profile(inputFile);
+        } else {
+            handleInputFile(inputFile);
+        }
     } else {
         handleInputStream();
     }

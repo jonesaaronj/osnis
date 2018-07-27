@@ -3,14 +3,14 @@
 
 #include <stdbool.h>
 
-struct gcm_info
+struct disc_info
 {
     unsigned char *id;
     unsigned char disc_number;
-    unsigned char *magic_word;
+    bool isGCM;
+    bool isWII;
 };
 
-bool IsGCM(unsigned char data[]);
-struct gcm_info * getGcmInfo(unsigned char data[]);
+struct disc_info * getDiscInfo(unsigned char data[]);
 
 #endif
