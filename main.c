@@ -8,13 +8,16 @@ void blah1(char *file)
     FILE *f;
 
     f = fopen(file, "rb");
-    unsigned char header[30];
-    fread(header, 1, 30, f);
+    unsigned char header[32];
+    fread(header, 1, 32, f);
     struct gcm_info * gcmInfo = getGcmInfo(header);
     fclose(f);
 
-    printf("Disc Id: %02x %02x %02x %02x\n", gcmInfo->id[0], gcmInfo->id[1], gcmInfo->id[3], gcmInfo->id[4]);
+    printf("Disc Id: %c%c%c%c%c%c\n", gcmInfo->id[0], gcmInfo->id[1], gcmInfo->id[2], gcmInfo->id[3], gcmInfo->id[4], gcmInfo->id[5]);
     printf("Disc Number: %d\n", gcmInfo->disc_number);
+    printf("Magic Word: %02x %02x %02x %02x\n", gcmInfo->magic_word[0], gcmInfo->magic_word[1], gcmInfo->magic_word[2], gcmInfo->magic_word[3]);
+    bool isGcm = IsGCM(gcmInfo->magic_word);
+    printf("Is GCM: %s\n", isGcm ? "true" : "false");
 
     f = fopen(file, "rb"); 
     unsigned char buffer[0x40000];
@@ -23,10 +26,12 @@ void blah1(char *file)
     int dataCount = 0;
     int junkCount = 0;
     int uniformCount = 0;
+    unsigned char * uniform = NULL;
+
     while((read = fread(buffer, 1, 0x40000, f)) > 0) {
 
         unsigned char * junk = getJunkBlock(i++, gcmInfo->id, gcmInfo->disc_number);
-        unsigned char * uniform = isUniform(buffer, read);
+        uniform = isUniform(buffer, read);
 
         if(uniform != NULL) {
             if (dataCount > 0){
@@ -44,7 +49,7 @@ void blah1(char *file)
                 dataCount = 0;
             }
             if (uniformCount > 0){
-                printf("%0d blocks of uniform\n", uniformCount);
+                printf("%0d blocks of uniform %02x\n", uniformCount, uniform);
                 uniformCount = 0;
             }
             junkCount++;
@@ -54,7 +59,7 @@ void blah1(char *file)
                 junkCount = 0;
             }
             if (uniformCount > 0){
-                printf("%0d blocks of uniform\n", uniformCount);
+                printf("%0d blocks of uniform %02x\n", uniformCount, uniform);
                 uniformCount = 0;
             }
             dataCount++;
@@ -69,7 +74,7 @@ void blah1(char *file)
         junkCount = 0;
     }
     if (uniformCount > 0){
-        printf("%0d blocks of uniform\n", uniformCount);
+        printf("%0d blocks of uniform %02x\n", uniformCount, uniform);
         uniformCount = 0;
     }
 

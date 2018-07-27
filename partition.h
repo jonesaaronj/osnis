@@ -7,10 +7,10 @@ struct gcm_info
 {
     unsigned char *id;
     unsigned char disc_number;
+    unsigned char *magic_word;
 };
 
 bool IsGCM(unsigned char data[]);
 struct gcm_info * getGcmInfo(unsigned char data[]);
-bool IsUniform(unsigned char data[], int offset, int size, unsigned char value);
 
 #endif
