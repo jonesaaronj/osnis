@@ -4,6 +4,11 @@
 #include <string.h>
 #include "hash.h"
 
+/**
+ * determine if the two char arrays are the same
+
+
+ */
 bool same(unsigned char a[], unsigned char b[], int len)
 {
     int i;
@@ -15,18 +20,27 @@ bool same(unsigned char a[], unsigned char b[], int len)
     return true;
 }
 
+/**
+ * Determine if the char array is filled with a single uniform byte/char
+ *
+ * @returns - an unsigned char pointer equal to the repeated char, or null if the array is not uniform
+ */
 unsigned char * isUniform(unsigned char data[], int len)
 {
-    int i;
-    unsigned char * a = &data[0];
-    for ( i = 0; i < len; i++) {
-        if (data[i] != *a) {
+    unsigned char * tmp = &data[0];
+    for (int i = 0; i < len; i++) {
+        if (data[i] != *tmp) {
             return NULL;
         }
     }
-    return a;
+    return tmp;
 }
 
+/**
+ * Get a junk block of size 262144/0X40000 for the given block, disc id, and disc number
+ *
+ * @returns - an unsigned char pointer to a 262144/0X40000 block of junk data
+ */
 unsigned char * getJunkBlock(unsigned int blockCount, unsigned char id[], unsigned char discNumber)
 {
     static unsigned char garbageBlock[0x40000] = {0};
@@ -60,6 +74,9 @@ unsigned char * getJunkBlock(unsigned int blockCount, unsigned char id[], unsign
     return garbageBlock;
 }
 
+/**
+ * Do some crazy junk creation stuff
+ */
 void a10002710(unsigned int sample, unsigned int buffer[])
 {
     unsigned int temp = 0;
@@ -82,6 +99,9 @@ void a10002710(unsigned int sample, unsigned int buffer[])
     }
 }
 
+/**
+ * Do some crazy junk creation stuff
+ */
 void a100026e0(unsigned int buffer[])
 {
     for (int i = 0; i < 0x20; i++) {

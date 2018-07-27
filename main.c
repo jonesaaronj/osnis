@@ -3,7 +3,7 @@
 #include "hash.h"
 #include "partition.h"
 
-void blah1(char *file)
+void profile(char *file)
 {
     FILE *f;
 
@@ -26,7 +26,7 @@ void blah1(char *file)
     int dataCount = 0;
     int junkCount = 0;
     int uniformCount = 0;
-    unsigned char * uniform = NULL;
+    unsigned char * uniform;
 
     while((read = fread(buffer, 1, 0x40000, f)) > 0) {
 
@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
 
     if (inputFile != NULL) {
         // handleInputFile(inputFile);
-        blah1(inputFile);
+        profile(inputFile);
     } else {
         handleInputStream();
     }
