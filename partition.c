@@ -35,7 +35,7 @@ struct disc_info * getDiscInfo(unsigned char data[])
     memcpy(id, data, 6);
 	disc_info->id = id;
 
-	// the disc number comes from byte 7
+	// the disc number comes from byte 6
 	disc_info->disc_number = data[6];
 
     disc_info->isGC = IsGC(data);
@@ -44,6 +44,6 @@ struct disc_info * getDiscInfo(unsigned char data[])
     // create a partition table
     unsigned char *table = malloc(sizeof(*table) * 0x40000);
     disc_info->table = table;
-    
+
  	return disc_info;
 }

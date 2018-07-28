@@ -21,6 +21,8 @@ bool isSame(unsigned char a[], unsigned char b[], int length)
  * Determine if the char array is filled with a single uniform byte/char
  *
  * @returns - an unsigned char pointer equal to the repeated char, or null if the array is not uniform
+ *
+ * @TODO: investigate if there is repeated junk of multiple characters
  */
 unsigned char * isUniform(unsigned char data[], int length)
 {

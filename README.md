@@ -3,15 +3,15 @@ https://github.com/LedZeppelin68/gcm-nasos-deux/
 block size 0x40000 / 262,144 bytes
 
 GC ISO 0x57058000 / 1,459,978,240 bytes
-5,569.  blocks
+5,570 blocks
 
-Wii ISO single 0x118240000 / 4,699,979,776 bytes
-17,929   blocks
+Wii Single Layer ISO 0x118240000 / 4,699,979,776 bytes
+17,929 blocks
 
-Wii ISO dual 0x1FB4E0000 / 8,511,160,320 bytes
-32,467.5 blocks
+Wii Dual Layer ISO 0x1FB4E0000 / 8,511,160,320 bytes
+32,468 blocks
 
-If we use a single block of size 0x40000 to describe our image
+If we use a single block of size 0x40000 bytes to describe our shrunken image
 And the largest image has 32,468 blocks
 Then each block will have 8 bytes available to describe it
 

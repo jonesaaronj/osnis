@@ -61,17 +61,27 @@ struct disc_info * profile(char *file)
         unsigned char * junk = getJunkBlock(i++, discInfo->id, discInfo->disc_number);
 
         unsigned char * uniformBytePtr;
+
+        // check if this is a uniform block of repeated bytes
         if((uniformBytePtr = isUniform(buffer, read)) != NULL) {
-            // if this is a block of uniform bytes set the partition table data
-            // to 0xFF 0xFF 0xFF 0xFF 0x00 0x00 0x00 0x?? where 0x?? is the repeated byte
+            // Set the partition table data to 0xFF 0xFF 0xFF 0xFF 0x00 0x00 0x00 0x?? 
+            // where 0x?? is the repeated byte
             memcpy(discInfo->table + (blockNum * 8), &FFs, 4);
             discInfo->table[blockNum * 8 + 7] = *uniformBytePtr;
-        } else if (isSame(buffer, junk, read)) {
-            // if we are generated junk write a block of F's to our partition table
+        } 
+
+        // check if this is a generated junk block
+        else if (isSame(buffer, junk, read)) {
+            // Write a block of F's to our partition table
             memcpy(discInfo->table + (blockNum * 8), &FFs, 8);
-        } else {
-            // write the block number to the partition table
-            memcpy(discInfo->table + (blockNum * 8), &blockNum, 8);
+        } 
+
+        // If this is not a junk block or repeated block then it is a data block
+        else {
+            // Write the block number to the partition table
+            // remember, add one for our partition table
+            uint64_t tmpBlockNum = blockNum + 1;
+            memcpy(discInfo->table + (blockNum * 8), &tmpBlockNum, 8);
         }
         blockNum++;
     }
