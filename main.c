@@ -1,38 +1,114 @@
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include "hash.h"
 #include "partition.h"
 
-void profile(char *file)
+/*
+ * Profile a disk.  Expects a full iso with valid 
+ * disc id and magic number
+ */
+struct disc_info * profile(char *file)
 {
     FILE *f;
+    
+    // if file pointer is empty read from stdin
+    f = (file != NULL) ? fopen(file, "rb") : stdin;
 
-    f = fopen(file, "rb");
-    unsigned char header[32];
-    fread(header, 1, 32, f);
-    struct disc_info * discInfo = getDiscInfo(header);
-    fclose(f);
-
-    printf("Disc Id: %c%c%c%c%c%c\n", discInfo->id[0], discInfo->id[1], discInfo->id[2], discInfo->id[3], discInfo->id[4], discInfo->id[5]);
-    printf("Disc Number: %d\n", discInfo->disc_number);
-    printf("Is GCM: %s\n", discInfo->isGCM ? "true" : "false");
-    printf("Is WII: %s\n", discInfo->isWII ? "true" : "false");
-
-    f = fopen(file, "rb"); 
+    // Do all of our reading in 0x40000 byte blocks
     unsigned char buffer[0x40000];
     unsigned int i = 0;
     size_t read;
+
+    // keep track of how much data or junk we see
     int dataCount = 0;
     int junkCount = 0;
     int uniformCount = 0;
-    unsigned char * uniform;
+    unsigned char uniformByte = 0;
 
+    struct disc_info * discInfo = NULL;
+    
+    // force our blockNum to be an unsigned 64 bit int (8 bytes * 8 bits)
+    // to make copying to the partition table easier
+    uint64_t FFs = 0xFFFFFFFF;
+    uint64_t blockNum = 0;
     while((read = fread(buffer, 1, 0x40000, f)) > 0) {
 
-        unsigned char * junk = getJunkBlock(i++, discInfo->id, discInfo->disc_number);
-        uniform = isUniform(buffer, read);
+        // get the disc info from the first block
+        if (discInfo == NULL) {
+            discInfo = getDiscInfo(buffer);
 
-        if(uniform != NULL) {
+            if (!discInfo->isGC || !discInfo->isWII) {
+                break;
+                // log error here?
+            }
+
+            // set disc info in partition table
+            memcpy(discInfo->table, discInfo->id, 6);
+            // set the disc number in the partition table
+            memcpy(discInfo->table + 6, &discInfo->disc_number, 1);
+
+            // don't forget to set the disc type at the end of everything
+            blockNum++;
+            continue;
+        }
+
+        // get the junk block for this block number
+        unsigned char * junk = getJunkBlock(i++, discInfo->id, discInfo->disc_number);
+
+        unsigned char * uniformBytePtr;
+        if((uniformBytePtr = isUniform(buffer, read)) != NULL) {
+            // if this is a block of uniform bytes set the partition table data
+            // to 0xFF 0xFF 0xFF 0xFF 0x00 0x00 0x00 0x?? where 0x?? is the repeated byte
+            memcpy(discInfo->table + (blockNum * 8), &FFs, 4);
+            discInfo->table[blockNum * 8 + 7] = *uniformBytePtr;
+        } else if (same(buffer, junk, read)) {
+            // if we are generated junk write a block of F's to our partition table
+            memcpy(discInfo->table + (blockNum * 8), &FFs, 8);
+        } else {
+            // write the block number to the partition table
+            memcpy(discInfo->table + (blockNum * 8), &blockNum, 8);
+        }
+        blockNum++;
+    }
+
+    fclose(f);
+
+    return discInfo;
+}
+
+void printProfile(struct disc_info * discInfo) {
+    if (discInfo->isGC) printf("Gamecube Image Found:\n");
+    if (discInfo->isWII) printf("WII Image Found:\n");
+    printf("Disc Id: %c%c%c%c%c%c\n", discInfo->id[0], discInfo->id[1], discInfo->id[2], discInfo->id[3], discInfo->id[4], discInfo->id[5]);
+    printf("Disc Id: %.*s\n", 6, discInfo->id);
+    printf("Disc Number: %d\n", discInfo->disc_number);
+
+    int dataCount = 0;
+    int junkCount = 0;
+    int uniformCount = 0;
+    unsigned char uniformByte = 0;
+
+    uint64_t FFs = 0xFFFFFFFF;
+    for(int blockNum = 1; blockNum < 0x8000; blockNum++) {
+        
+        unsigned char * uniformBytePtr;
+
+        // if 8 FFs we are a junk block
+        if (memcmp(&FFs, discInfo->table + (blockNum * 8), 8) == 0) {
+            if (dataCount > 0){
+                printf("%0d blocks of data\n", dataCount);
+                dataCount = 0;
+            }
+            if (uniformCount > 0){
+                printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
+                uniformCount = 0;
+            }
+            junkCount++;
+        }
+        
+        // if 4 FFs we are a repeated byte
+        else if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
             if (dataCount > 0){
                 printf("%0d blocks of data\n", dataCount);
                 dataCount = 0;
@@ -41,14 +117,117 @@ void profile(char *file)
                 printf("%0d blocks of junk\n", junkCount);
                 junkCount = 0;
             }
-            uniformCount++;
-        } else if (same(buffer, junk, 4)) {
+            uniformBytePtr = discInfo->table + (blockNum * 8) + 7;
+            if (uniformCount == 0 || uniformByte == *uniformBytePtr) {
+                uniformCount++;    
+            } else {
+                // if this is a different junk byte dump count and 
+                // start counting over with the new junk byte
+                printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
+                uniformByte = *uniformBytePtr;
+                uniformCount = 1;
+            }
+        } 
+
+        // we are a data block
+        else {
+            if (junkCount > 0) {
+                printf("%0d blocks of junk\n", junkCount);
+                junkCount = 0;
+            }
+            if (uniformCount > 0){
+                printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
+                uniformCount = 0;
+            }
+            dataCount++;
+        }
+
+        if (dataCount > 0){
+            printf("%0d blocks of data\n", dataCount);
+            dataCount = 0;
+        }
+        if (junkCount > 0) {
+            printf("%0d blocks of junk\n", junkCount);
+            junkCount = 0;
+        }
+        if (uniformCount > 0){
+            printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
+            uniformCount = 0;
+        }
+    }
+}
+
+/*
+ * Profile a disk.  Expects a full iso with valid 
+ * disc id and magic number
+ */
+void profile2(char *file)
+{
+    FILE *f;
+
+    // if file is null read from stdin
+    f = (file != NULL) ? fopen(file, "rb") : stdin;
+
+    unsigned char header[32];
+    fread(header, 1, 32, f);
+    struct disc_info * discInfo = getDiscInfo(header);
+    fclose(f);
+
+    if (discInfo->isGC) printf("Gamecube Image Found:\n");
+    if (discInfo->isWII) printf("WII Image Found:\n");
+    // printf("Disc Id: %c%c%c%c%c%c\n", discInfo->id[0], discInfo->id[1], discInfo->id[2], discInfo->id[3], discInfo->id[4], discInfo->id[5]);
+    printf("Disc Id: %.*s\n", 6, discInfo->id);
+    printf("Disc Number: %d\n", discInfo->disc_number);
+    
+    f = (file != NULL) ? fopen(file, "rb") : stdin;
+    // Do all of our reading in 0x40000 byte blocks
+    unsigned char buffer[0x40000];
+    unsigned int i = 0;
+    size_t read;
+
+    // keep track of how much data or junk we see
+    int dataCount = 0;
+    int junkCount = 0;
+    int uniformCount = 0;
+    unsigned char uniformByte = 0;
+
+    while((read = fread(buffer, 1, 0x40000, f)) > 0) {
+
+        // get the disc info from the first block
+        if (discInfo == NULL) {
+
+        }
+
+        // get the junk block for this block number
+        unsigned char * junk = getJunkBlock(i++, discInfo->id, discInfo->disc_number);
+
+        unsigned char * uniformBytePtr;
+        if((uniformBytePtr = isUniform(buffer, read)) != NULL) {
+            if (dataCount > 0){
+                printf("%0d blocks of data\n", dataCount);
+                dataCount = 0;
+            }
+            if (junkCount > 0) {
+                printf("%0d blocks of junk\n", junkCount);
+                junkCount = 0;
+            }
+            
+            if (uniformCount == 0 || uniformByte == *uniformBytePtr) {
+                uniformCount++;    
+            } else {
+                // if this is a different junk byte dump count and 
+                // start counting over with the new junk byte
+                printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
+                uniformByte = *uniformBytePtr;
+                uniformCount = 1;
+            }
+        } else if (same(buffer, junk, read)) {
             if (dataCount > 0){
                 printf("%0d blocks of data\n", dataCount);
                 dataCount = 0;
             }
             if (uniformCount > 0){
-                printf("%0d blocks of uniform %02x\n", uniformCount, uniform);
+                printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
                 uniformCount = 0;
             }
             junkCount++;
@@ -58,7 +237,7 @@ void profile(char *file)
                 junkCount = 0;
             }
             if (uniformCount > 0){
-                printf("%0d blocks of uniform %02x\n", uniformCount, uniform);
+                printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
                 uniformCount = 0;
             }
             dataCount++;
@@ -73,39 +252,11 @@ void profile(char *file)
         junkCount = 0;
     }
     if (uniformCount > 0){
-        printf("%0d blocks of uniform %02x\n", uniformCount, uniform);
+        printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
         uniformCount = 0;
     }
 
     fclose(f);
-}
-
-void handleInputStream()
-{
-    unsigned char buffer[1];
-
-    while(read(0, buffer, sizeof(buffer))>0) {
-        printf("%c", buffer[0]);
-    }
-}
-
-void handleInputFile(char *file)
-{
-    FILE *f = fopen(file, "rb");
-    unsigned char buffer[1];
-    while(fread(buffer, 1, 1, f)>0) {
-        printf("%c", buffer[0]);
-    }
-}
-
-void handleOutputFile(FILE *file, unsigned char buffer[], int size)
-{
-    fwrite(buffer, size, 1, file);
-}
-
-void handleOutputStream(unsigned char byte)
-{
-    
 }
 
 int main(int argc, char *argv[])
@@ -138,19 +289,7 @@ int main(int argc, char *argv[])
             }
     }
 
-    if (inputFile != NULL) {
-        if (doProfile) {
-            profile(inputFile);
-        } else {
-            handleInputFile(inputFile);
-        }
-    } else {
-        handleInputStream();
-    }
-
-    if (outputFile != NULL) {
-        FILE *outputF = fopen(outputFile, "wb");
-    } else {
-        handleOutputStream(0);
+    if (doProfile) {
+        printProfile(profile(inputFile));
     }
 }

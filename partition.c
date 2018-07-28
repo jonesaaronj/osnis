@@ -7,7 +7,7 @@
 /*
  * The magic number starts at byte 28 for GC games
  */
-bool IsGCM(unsigned char data[])
+bool IsGC(unsigned char data[])
 {
 	unsigned char magic_word[] = {0xC2, 0x33, 0x9F, 0x3D};
     return memcmp(data + 28, magic_word, 4) == 0;
@@ -38,8 +38,12 @@ struct disc_info * getDiscInfo(unsigned char data[])
 	// the disc number comes from byte 7
 	disc_info->disc_number = data[6];
 
-    disc_info->isGCM = IsGCM(data);
+    disc_info->isGC = IsGC(data);
     disc_info->isWII = IsWII(data);
 
+    // create a partition table
+    unsigned char *table = malloc(sizeof(*table) * 0x40000);
+    disc_info->table = table;
+    
  	return disc_info;
 }

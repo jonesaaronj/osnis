@@ -5,10 +5,11 @@
 
 struct disc_info
 {
-    unsigned char *id;
+    unsigned char * id;
     unsigned char disc_number;
-    bool isGCM;
+    bool isGC;
     bool isWII;
+    unsigned char * table;
 };
 
 struct disc_info * getDiscInfo(unsigned char data[]);
