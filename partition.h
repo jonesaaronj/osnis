@@ -7,6 +7,7 @@ struct disc_info
 {
     unsigned char * id;
     unsigned char disc_number;
+    unsigned char * disc_name;
     bool isGC;
     bool isWII;
     bool isDualLayer;

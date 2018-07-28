@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdint.h>
 #include "hash.h"
 #include "partition.h"
 
@@ -21,7 +22,6 @@ struct disc_info * profile(char *file)
 
     // Do all of our reading in 0x40000 byte blocks
     unsigned char buffer[0x40000];
-    unsigned int i = 0;
     size_t read;
 
     // keep track of how much data or junk we see
@@ -42,7 +42,7 @@ struct disc_info * profile(char *file)
         if (discInfo == NULL) {
             discInfo = getDiscInfo(buffer);
 
-            if (!discInfo->isGC || !discInfo->isWII) {
+            if (!discInfo->isGC && !discInfo->isWII) {
                 printf("ERROR: We are not a GC or WII disc\n");
                 break;
             }
@@ -58,7 +58,7 @@ struct disc_info * profile(char *file)
         }
 
         // get the junk block for this block number
-        unsigned char * junk = getJunkBlock(i++, discInfo->id, discInfo->disc_number);
+        unsigned char * junk = getJunkBlock(blockNum, discInfo->id, discInfo->disc_number);
 
         unsigned char * uniformBytePtr;
 
@@ -98,10 +98,10 @@ struct disc_info * profile(char *file)
 }
 
 void printProfile(struct disc_info * discInfo) {
-    if (discInfo->isGC) printf("Gamecube Image Found:\n");
-    if (discInfo->isWII) printf("WII Image Found:\n");
-    printf("Disc Id: %c%c%c%c%c%c\n", discInfo->id[0], discInfo->id[1], discInfo->id[2], discInfo->id[3], discInfo->id[4], discInfo->id[5]);
+    if (discInfo->isGC) printf("Gamecube Image Found!!!\n");
+    if (discInfo->isWII) printf("WII Image Found!!!\n");
     printf("Disc Id: %.*s\n", 6, discInfo->id);
+    printf("Disc Name: %s\n", discInfo->disc_name);
     printf("Disc Number: %d\n", discInfo->disc_number);
 
     int dataCount = 0;
@@ -110,19 +110,25 @@ void printProfile(struct disc_info * discInfo) {
     unsigned char uniformByte = 0;
 
     uint64_t FFs = 0xFFFFFFFF;
+    uint64_t ZERO = 0x00000000;
     int blockNum;
-    for(blockNum = 1; blockNum < 0x8000; blockNum++) {
+    for(blockNum = 0; blockNum < 0x8000; blockNum++) {
         
         unsigned char * uniformBytePtr;
 
+        // if 8 00s we are at the end of the disc
+        if (memcmp(&ZERO, discInfo->table + (blockNum * 8), 8) == 0) {
+            break;
+        }
+
         // if 8 FFs we are a junk block
-        if (memcmp(&FFs, discInfo->table + (blockNum * 8), 8) == 0) {
+        else if (memcmp(&FFs, discInfo->table + (blockNum * 8), 8) == 0) {
             if (dataCount > 0){
-                printf("%0d blocks of data\n", dataCount);
+                printf("%05d blocks of data\n", dataCount);
                 dataCount = 0;
             }
             if (uniformCount > 0){
-                printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
+                printf("%05d blocks of uniform %02x\n", uniformCount, uniformByte);
                 uniformCount = 0;
             }
             junkCount++;
@@ -131,11 +137,11 @@ void printProfile(struct disc_info * discInfo) {
         // if 4 FFs we are a repeated byte
         else if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
             if (dataCount > 0){
-                printf("%0d blocks of data\n", dataCount);
+                printf("%05d blocks of data\n", dataCount);
                 dataCount = 0;
             }
             if (junkCount > 0) {
-                printf("%0d blocks of junk\n", junkCount);
+                printf("%05d blocks of junk\n", junkCount);
                 junkCount = 0;
             }
             uniformBytePtr = discInfo->table + (blockNum * 8) + 7;
@@ -144,39 +150,38 @@ void printProfile(struct disc_info * discInfo) {
             } else {
                 // if this is a different junk byte dump count and 
                 // start counting over with the new junk byte
-                printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
+                printf("%05d blocks of uniform %02x\n", uniformCount, uniformByte);
                 uniformByte = *uniformBytePtr;
                 uniformCount = 1;
             }
-        } 
+        }
 
         // we are a data block
         else {
             if (junkCount > 0) {
-                printf("%0d blocks of junk\n", junkCount);
+                printf("%05d blocks of junk\n", junkCount);
                 junkCount = 0;
             }
             if (uniformCount > 0){
-                printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
+                printf("%05d blocks of uniform %02x\n", uniformCount, uniformByte);
                 uniformCount = 0;
             }
             dataCount++;
         }
-
-        if (dataCount > 0){
-            printf("%0d blocks of data\n", dataCount);
-            dataCount = 0;
-        }
-        if (junkCount > 0) {
-            printf("%0d blocks of junk\n", junkCount);
-            junkCount = 0;
-        }
-        if (uniformCount > 0){
-            printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
-            uniformCount = 0;
-        }
     }
-    printf("TOTAL BLOCKS: %d\n", blockNum);
+    if (dataCount > 0){
+        printf("%05d blocks of data\n", dataCount);
+        dataCount = 0;
+    }
+    if (junkCount > 0) {
+        printf("%05d blocks of junk\n", junkCount);
+        junkCount = 0;
+    }
+    if (uniformCount > 0){
+        printf("%05d blocks of uniform %02x\n", uniformCount, uniformByte);
+        uniformCount = 0;
+    }
+    printf("%05d TOTAL BLOCKS\n", blockNum);
 }
 
 /*
@@ -197,7 +202,6 @@ void profile2(char *file)
 
     if (discInfo->isGC) printf("Gamecube Image Found:\n");
     if (discInfo->isWII) printf("WII Image Found:\n");
-    printf("Disc Id: %c%c%c%c%c%c\n", discInfo->id[0], discInfo->id[1], discInfo->id[2], discInfo->id[3], discInfo->id[4], discInfo->id[5]);
     printf("Disc Id: %.*s\n", 6, discInfo->id);
     printf("Disc Number: %d\n", discInfo->disc_number);
     
@@ -283,17 +287,19 @@ void profile2(char *file)
 
 int main(int argc, char *argv[])
 {
-    printf("Hello world\n");
-    
     char *inputFile = NULL;
     char *outputFile = NULL;
     bool doProfile = false;
+    bool doProfile2 = false;
 
     int opt;
-    while ((opt = getopt(argc, argv, "i:o:p")) != -1) {
+    while ((opt = getopt(argc, argv, "i:o:pq")) != -1) {
         switch (opt) {
             case 'p':
                 doProfile = true;
+                break;
+            case 'q':
+                doProfile2 = true;
                 break;
             case 'i':
                 inputFile = optarg; 
@@ -313,5 +319,9 @@ int main(int argc, char *argv[])
 
     if (doProfile) {
         printProfile(profile(inputFile));
+        // profile2(inputFile);
+    }
+    if (doProfile2) {
+        profile2(inputFile);
     }
 }

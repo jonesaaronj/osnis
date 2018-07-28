@@ -35,8 +35,14 @@ struct disc_info * getDiscInfo(unsigned char data[])
     memcpy(id, data, 6);
 	disc_info->id = id;
 
-	// the disc number comes from byte 6
-	disc_info->disc_number = data[6];
+    // the disc number comes from byte 6
+    disc_info->disc_number = data[6];
+
+    // the disc name comes at byte 32
+    size_t nameLength = strnlen(data + 32, 100);
+    unsigned char *name = malloc(sizeof(*id) * nameLength + 1);
+    memcpy(name, data + 32, nameLength + 1);
+    disc_info->disc_name = name;
 
     disc_info->isGC = IsGC(data);
     disc_info->isWII = IsWII(data);
