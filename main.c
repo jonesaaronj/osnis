@@ -9,6 +9,10 @@ const unsigned char GC_DISC = 1;
 const unsigned char WII_DISC = 2;
 const unsigned char WII_DL_DISC = 3;
 
+const unsigned char GC_LAST_BLOCK_SIZE = 98304;
+const unsigned char WII_LAST_BLOCK_SIZE = 0x40000;
+const unsigned char WII_DL_LAST_BLOCK_SIZE = 131072;
+
 /*
  * Profile a disk.  Expects a full iso with valid 
  * disc id and magic number
