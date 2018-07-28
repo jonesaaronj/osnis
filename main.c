@@ -4,6 +4,10 @@
 #include "hash.h"
 #include "partition.h"
 
+const unsigned char GC_DISC = 1;
+const unsigned char WII_DISC = 2;
+const unsigned char WII_DL_DISC = 3;
+
 /*
  * Profile a disk.  Expects a full iso with valid 
  * disc id and magic number
@@ -39,8 +43,8 @@ struct disc_info * profile(char *file)
             discInfo = getDiscInfo(buffer);
 
             if (!discInfo->isGC || !discInfo->isWII) {
+                printf("ERROR: We are not a GC or WII disc\n");
                 break;
-                // log error here?
             }
 
             // set disc info in partition table
@@ -62,7 +66,7 @@ struct disc_info * profile(char *file)
             // to 0xFF 0xFF 0xFF 0xFF 0x00 0x00 0x00 0x?? where 0x?? is the repeated byte
             memcpy(discInfo->table + (blockNum * 8), &FFs, 4);
             discInfo->table[blockNum * 8 + 7] = *uniformBytePtr;
-        } else if (same(buffer, junk, read)) {
+        } else if (isSame(buffer, junk, read)) {
             // if we are generated junk write a block of F's to our partition table
             memcpy(discInfo->table + (blockNum * 8), &FFs, 8);
         } else {
@@ -71,8 +75,14 @@ struct disc_info * profile(char *file)
         }
         blockNum++;
     }
-
     fclose(f);
+
+    if (blockNum > 32467) {
+        discInfo->isDualLayer = true;
+    }
+
+    discInfo->table[7] = discInfo->isGC ? GC_DISC :
+        discInfo->isWII && discInfo->isDualLayer ? WII_DL_DISC : WII_DISC;
 
     return discInfo;
 }
@@ -221,7 +231,7 @@ void profile2(char *file)
                 uniformByte = *uniformBytePtr;
                 uniformCount = 1;
             }
-        } else if (same(buffer, junk, read)) {
+        } else if (isSame(buffer, junk, read)) {
             if (dataCount > 0){
                 printf("%0d blocks of data\n", dataCount);
                 dataCount = 0;

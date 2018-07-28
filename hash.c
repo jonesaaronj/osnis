@@ -5,14 +5,11 @@
 #include "hash.h"
 
 /**
- * determine if the two char arrays are the same
-
-
+ * determine if the two char arrays are the same for lenth
  */
-bool same(unsigned char a[], unsigned char b[], int len)
+bool isSame(unsigned char a[], unsigned char b[], int length)
 {
-    int i;
-    for ( i = 0; i < len; i++) {
+    for (int i = 0; i < length; i++) {
         if (a[i] != b[i]) {
             return false;
         }
@@ -25,15 +22,54 @@ bool same(unsigned char a[], unsigned char b[], int len)
  *
  * @returns - an unsigned char pointer equal to the repeated char, or null if the array is not uniform
  */
-unsigned char * isUniform(unsigned char data[], int len)
+unsigned char * isUniform(unsigned char data[], int length)
 {
     unsigned char * tmp = &data[0];
-    for (int i = 0; i < len; i++) {
+    for (int i = 0; i < length; i++) {
         if (data[i] != *tmp) {
             return NULL;
         }
     }
     return tmp;
+}
+
+
+/**
+ * Do some crazy junk creation stuff
+ */
+void a100026e0(unsigned int buffer[])
+{
+    for (int i = 0; i < 0x20; i++) {
+        buffer[i] ^= buffer[i + 0x1e9];
+    }
+    for (int i = 0x20; i < 0x209; i++) {
+        buffer[i] ^= buffer[i - 0x20];
+    }
+}
+
+/**
+ * Do some crazy junk creation stuff
+ */
+void a10002710(unsigned int sample, unsigned int buffer[])
+{
+    unsigned int temp = 0;
+    
+    for (int i = 0; i < 0x11; i++) {
+        for (int j = 0; j < 0x20; j++) {
+            sample *= 0x5d588b65u;
+            temp = (temp >> 1) | (++sample & 0x80000000u);
+        }
+        buffer[i] = temp;
+    }
+
+    buffer[0x10] = (buffer[16] << 23) ^ (buffer[0] >> 9) ^ buffer[16];
+
+    for (int i = 1; i < 0x1f9; i++) {
+        buffer[i + 0x10] = ((buffer[i - 1] << 0x17) ^ (buffer[i] >> 0x9)) ^ buffer[i + 0xf];
+    }
+    for (int i = 0; i < 3; i++) {
+        a100026e0(buffer);
+    }
 }
 
 /**
@@ -72,42 +108,4 @@ unsigned char * getJunkBlock(unsigned int blockCount, unsigned char id[], unsign
     }
 
     return garbageBlock;
-}
-
-/**
- * Do some crazy junk creation stuff
- */
-void a10002710(unsigned int sample, unsigned int buffer[])
-{
-    unsigned int temp = 0;
-    
-    for (int i = 0; i < 0x11; i++) {
-        for (int j = 0; j < 0x20; j++) {
-            sample *= 0x5d588b65u;
-            temp = (temp >> 1) | (++sample & 0x80000000u);
-        }
-        buffer[i] = temp;
-    }
-
-    buffer[0x10] = (buffer[16] << 23) ^ (buffer[0] >> 9) ^ buffer[16];
-
-    for (int i = 1; i < 0x1f9; i++) {
-        buffer[i + 0x10] = ((buffer[i - 1] << 0x17) ^ (buffer[i] >> 0x9)) ^ buffer[i + 0xf];
-    }
-    for (int i = 0; i < 3; i++) {
-        a100026e0(buffer);
-    }
-}
-
-/**
- * Do some crazy junk creation stuff
- */
-void a100026e0(unsigned int buffer[])
-{
-    for (int i = 0; i < 0x20; i++) {
-        buffer[i] ^= buffer[i + 0x1e9];
-    }
-    for (int i = 0x20; i < 0x209; i++) {
-        buffer[i] ^= buffer[i - 0x20];
-    }
 }

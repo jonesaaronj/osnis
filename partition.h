@@ -9,6 +9,7 @@ struct disc_info
     unsigned char disc_number;
     bool isGC;
     bool isWII;
+    bool isDualLayer;
     unsigned char * table;
 };
 
