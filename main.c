@@ -100,7 +100,8 @@ void printProfile(struct disc_info * discInfo) {
     unsigned char uniformByte = 0;
 
     uint64_t FFs = 0xFFFFFFFF;
-    for(int blockNum = 1; blockNum < 0x8000; blockNum++) {
+    int blockNum;
+    for(blockNum = 1; blockNum < 0x8000; blockNum++) {
         
         unsigned char * uniformBytePtr;
 
@@ -165,6 +166,7 @@ void printProfile(struct disc_info * discInfo) {
             uniformCount = 0;
         }
     }
+    printf("TOTAL BLOCKS: %d\n", blockNum);
 }
 
 /*
@@ -185,7 +187,7 @@ void profile2(char *file)
 
     if (discInfo->isGC) printf("Gamecube Image Found:\n");
     if (discInfo->isWII) printf("WII Image Found:\n");
-    // printf("Disc Id: %c%c%c%c%c%c\n", discInfo->id[0], discInfo->id[1], discInfo->id[2], discInfo->id[3], discInfo->id[4], discInfo->id[5]);
+    printf("Disc Id: %c%c%c%c%c%c\n", discInfo->id[0], discInfo->id[1], discInfo->id[2], discInfo->id[3], discInfo->id[4], discInfo->id[5]);
     printf("Disc Id: %.*s\n", 6, discInfo->id);
     printf("Disc Number: %d\n", discInfo->disc_number);
     
