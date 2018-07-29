@@ -15,8 +15,11 @@ If we use a single block of size 0x40000 bytes to describe our shrunken image
 And the largest image has 32,468 blocks
 Then each block will have 8 bytes available to describe it
 
-The first block will contain the Disc id, Disc Number, and Disc Type.  
-The first full block from the iso will always be available as the second block in the shrunken image
+The first block will be a magic number to identify a shrunken image
+00-07 "SHRUNKEN"
+
+The second block will contain the Disc id, Disc Number, and Disc Type.  
+The second full block from the iso will always be available as the second block in the shrunken image
 00-05 Disc Id
 06 Disc Number
 07 Disc Type 1=GC Single Layer 2=WII Single Layer 3=WII Dual Layer

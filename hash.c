@@ -5,7 +5,13 @@
 #include "hash.h"
 
 /**
- * determine if the two char arrays are the same for lenth
+ * Determine if the two char arrays are the same for lenth
+ * 
+ * param - unsigned char a[]
+ * param - unsigned char b[]
+ * param - int length
+ *
+ * returns - true if the two arrays are the sames
  */
 bool isSame(unsigned char a[], unsigned char b[], int length)
 {
@@ -16,25 +22,6 @@ bool isSame(unsigned char a[], unsigned char b[], int length)
     }
     return true;
 }
-
-/**
- * Determine if the char array is filled with a single uniform byte/char
- *
- * @returns - an unsigned char pointer equal to the repeated char, or null if the array is not uniform
- *
- * @TODO: investigate if there is repeated junk of multiple characters
- */
-unsigned char * isUniform(unsigned char data[], int length)
-{
-    unsigned char * tmp = &data[0];
-    for (int i = 0; i < length; i++) {
-        if (data[i] != *tmp) {
-            return NULL;
-        }
-    }
-    return tmp;
-}
-
 
 /**
  * Do some crazy junk creation stuff
@@ -77,7 +64,11 @@ void a10002710(unsigned int sample, unsigned int buffer[])
 /**
  * Get a junk block of size 262144/0X40000 for the given block, disc id, and disc number
  *
- * @returns - an unsigned char pointer to a 262144/0X40000 block of junk data
+ * param - unsigned int blockCount
+ * param - unsigned char id[]
+ * param - unsigned char discNumber
+ *
+ * returns - an unsigned char pointer to a 262144/0X40000 block of junk data
  */
 unsigned char * getJunkBlock(unsigned int blockCount, unsigned char id[], unsigned char discNumber)
 {

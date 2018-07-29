@@ -1,292 +1,99 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdint.h>
 #include "hash.h"
 #include "partition.h"
 
-const unsigned char GC_DISC = 1;
-const unsigned char WII_DISC = 2;
-const unsigned char WII_DL_DISC = 3;
-
-const unsigned char GC_LAST_BLOCK_SIZE = 98304;
-const unsigned char WII_LAST_BLOCK_SIZE = 0x40000;
-const unsigned char WII_DL_LAST_BLOCK_SIZE = 131072;
-
-/*
- * Profile a disk.  Expects a full iso with valid 
- * disc id and magic number
+/**
+ * Create a shrunken image from the input file and disc info
  */
-struct disc_info * profile(char *file)
-{
-    FILE *f;
-    
+void createShrunkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) {
+
+    if (!discInfo->isGC && !discInfo->isWII) {
+        fprintf(stderr, "ERROR: We are not a GC or WII disc\n");
+        return;
+    }
+
     // if file pointer is empty read from stdin
-    f = (file != NULL) ? fopen(file, "rb") : stdin;
+    FILE *inputF = (inputFile != NULL) ? fopen(inputFile, "rb") : stdin;
+
+    // if file pointer is empty read from stdout
+    FILE *outputF = (outputFile != NULL) ? fopen(outputFile, "wb") : stdout;
 
     // Do all of our reading in 0x40000 byte blocks
-    unsigned char buffer[0x40000];
+    unsigned char buffer[BLOCK_SIZE];
     size_t read;
+    size_t write;
 
-    // keep track of how much data or junk we see
-    int dataCount = 0;
-    int junkCount = 0;
-    int uniformCount = 0;
-    unsigned char uniformByte = 0;
+    int blockNum = discInfo->isGC ? GC_BLOCK_SIZE :
+        discInfo->isWII && discInfo->isDualLayer ? WII_DL_BLOCK_SIZE : WII_BLOCK_SIZE;
 
-    struct disc_info * discInfo = NULL;
-    
-    // force our blockNum to be an unsigned 64 bit int (8 bytes * 8 bits)
-    // to make copying to the partition table easier
-    uint64_t FFs = 0xFFFFFFFF;
-    uint64_t blockNum = 0;
-    while((read = fread(buffer, 1, 0x40000, f)) > 0) {
+    size_t lastBlockSize = discInfo->isGC ? GC_LAST_BLOCK_SIZE :
+        discInfo->isWII && discInfo->isDualLayer ? WII_DL_LAST_BLOCK_SIZE : WII_LAST_BLOCK_SIZE;
 
-        // get the disc info from the first block
-        if (discInfo == NULL) {
-            discInfo = getDiscInfo(buffer);
+    // write partition block
+    fwrite(discInfo->table, BLOCK_SIZE, 1, outputF);
 
-            if (!discInfo->isGC && !discInfo->isWII) {
-                printf("ERROR: We are not a GC or WII disc\n");
-                break;
-            }
+    // our first block in the table is the magic number so to make things
+    // easier start at i = 1
+    size_t shrunkBlockNum = 2;
+    for(uint64_t i = 1; i <= blockNum; i++) {
 
-            // set disc info in partition table
-            memcpy(discInfo->table, discInfo->id, 6);
-            // set the disc number in the partition table
-            memcpy(discInfo->table + 6, &discInfo->disc_number, 1);
+        // set the block size to write
+        size_t writeSize = i == blockNum ? lastBlockSize : BLOCK_SIZE;
 
-            // don't forget to set the disc type at the end of everything
-            blockNum++;
-            continue;
-        }
-
-        // get the junk block for this block number
-        unsigned char * junk = getJunkBlock(blockNum, discInfo->id, discInfo->disc_number);
-
-        unsigned char * uniformBytePtr;
-
-        // check if this is a uniform block of repeated bytes
-        if((uniformBytePtr = isUniform(buffer, read)) != NULL) {
-            // Set the partition table data to 0xFF 0xFF 0xFF 0xFF 0x00 0x00 0x00 0x?? 
-            // where 0x?? is the repeated byte
-            memcpy(discInfo->table + (blockNum * 8), &FFs, 4);
-            discInfo->table[blockNum * 8 + 7] = *uniformBytePtr;
-        } 
-
-        // check if this is a generated junk block
-        else if (isSame(buffer, junk, read)) {
-            // Write a block of F's to our partition table
-            memcpy(discInfo->table + (blockNum * 8), &FFs, 8);
-        } 
-
-        // If this is not a junk block or repeated block then it is a data block
-        else {
-            // Write the block number to the partition table
-            // remember, add one for our partition table
-            uint64_t tmpBlockNum = blockNum + 1;
-            memcpy(discInfo->table + (blockNum * 8), &tmpBlockNum, 8);
-        }
-        blockNum++;
-    }
-    fclose(f);
-
-    if (blockNum > 32467) {
-        discInfo->isDualLayer = true;
-    }
-
-    discInfo->table[7] = discInfo->isGC ? GC_DISC :
-        discInfo->isWII && discInfo->isDualLayer ? WII_DL_DISC : WII_DISC;
-
-    return discInfo;
-}
-
-void printProfile(struct disc_info * discInfo) {
-    if (discInfo->isGC) printf("Gamecube Image Found!!!\n");
-    if (discInfo->isWII) printf("WII Image Found!!!\n");
-    printf("Disc Id: %.*s\n", 6, discInfo->id);
-    printf("Disc Name: %s\n", discInfo->disc_name);
-    printf("Disc Number: %d\n", discInfo->disc_number);
-
-    int dataCount = 0;
-    int junkCount = 0;
-    int uniformCount = 0;
-    unsigned char uniformByte = 0;
-
-    uint64_t FFs = 0xFFFFFFFF;
-    uint64_t ZERO = 0x00000000;
-    int blockNum;
-    for(blockNum = 0; blockNum < 0x8000; blockNum++) {
-        
-        unsigned char * uniformBytePtr;
-
-        // if 8 00s we are at the end of the disc
-        if (memcmp(&ZERO, discInfo->table + (blockNum * 8), 8) == 0) {
+        // read the current block into the buffer
+        read = fread(buffer, 1, BLOCK_SIZE, inputF);
+        if (read != writeSize) {
+            fprintf(stderr, "ERROR: read size not equal to write size\n");
             break;
         }
 
-        // if 8 FFs we are a junk block
-        else if (memcmp(&FFs, discInfo->table + (blockNum * 8), 8) == 0) {
-            if (dataCount > 0){
-                printf("%05d blocks of data\n", dataCount);
-                dataCount = 0;
-            }
-            if (uniformCount > 0){
-                printf("%05d blocks of uniform %02x\n", uniformCount, uniformByte);
-                uniformCount = 0;
-            }
-            junkCount++;
+        // if we are at a zero block in our table we done f'ed up
+        if (memcmp(&ZERO, discInfo->table + (i * 8), 8) == 0) {
+            fprintf(stderr, "ERROR: Saw a zero block before end of file\n");
+            fprintf(stderr, "%d\n", i);
+            break;
         }
-        
-        // if 4 FFs we are a repeated byte
-        else if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
-            if (dataCount > 0){
-                printf("%05d blocks of data\n", dataCount);
-                dataCount = 0;
-            }
-            if (junkCount > 0) {
-                printf("%05d blocks of junk\n", junkCount);
-                junkCount = 0;
-            }
-            uniformBytePtr = discInfo->table + (blockNum * 8) + 7;
-            if (uniformCount == 0 || uniformByte == *uniformBytePtr) {
-                uniformCount++;    
+
+        // ignore junk blocks
+        unsigned char * junk = getJunkBlock(i, discInfo->discId, discInfo->discNumber);
+        if (isSame(buffer, junk, read)) {
+            // make sure our table is correct
+            if (memcmp(&FFs, discInfo->table + (i * 8), 8) == 0) {
+                continue;
             } else {
-                // if this is a different junk byte dump count and 
-                // start counting over with the new junk byte
-                printf("%05d blocks of uniform %02x\n", uniformCount, uniformByte);
-                uniformByte = *uniformBytePtr;
-                uniformCount = 1;
+                fprintf(stderr, "ERROR: Saw a junk block but expected something else\n");
+                break;
             }
         }
 
-        // we are a data block
-        else {
-            if (junkCount > 0) {
-                printf("%05d blocks of junk\n", junkCount);
-                junkCount = 0;
+        // if we got this far we should be a data block
+        // make sure our table is correct
+        if (memcmp(&shrunkBlockNum, discInfo->table + (i * 8), 8) == 0) {
+            shrunkBlockNum++;
+            // write the block to the file
+            write = fwrite(buffer, 1, writeSize, outputF);
+            if (write < 0) {
+                fprintf(stderr, "ERROR: could not write block\n");
+                break;
             }
-            if (uniformCount > 0){
-                printf("%05d blocks of uniform %02x\n", uniformCount, uniformByte);
-                uniformCount = 0;
-            }
-            dataCount++;
-        }
-    }
-    if (dataCount > 0){
-        printf("%05d blocks of data\n", dataCount);
-        dataCount = 0;
-    }
-    if (junkCount > 0) {
-        printf("%05d blocks of junk\n", junkCount);
-        junkCount = 0;
-    }
-    if (uniformCount > 0){
-        printf("%05d blocks of uniform %02x\n", uniformCount, uniformByte);
-        uniformCount = 0;
-    }
-    printf("%05d TOTAL BLOCKS\n", blockNum);
-}
-
-/*
- * Profile a disk.  Expects a full iso with valid 
- * disc id and magic number
- */
-void profile2(char *file)
-{
-    FILE *f;
-
-    // if file is null read from stdin
-    f = (file != NULL) ? fopen(file, "rb") : stdin;
-
-    unsigned char header[32];
-    fread(header, 1, 32, f);
-    struct disc_info * discInfo = getDiscInfo(header);
-    fclose(f);
-
-    if (discInfo->isGC) printf("Gamecube Image Found:\n");
-    if (discInfo->isWII) printf("WII Image Found:\n");
-    printf("Disc Id: %.*s\n", 6, discInfo->id);
-    printf("Disc Number: %d\n", discInfo->disc_number);
-    
-    f = (file != NULL) ? fopen(file, "rb") : stdin;
-    // Do all of our reading in 0x40000 byte blocks
-    unsigned char buffer[0x40000];
-    unsigned int i = 0;
-    size_t read;
-
-    // keep track of how much data or junk we see
-    int dataCount = 0;
-    int junkCount = 0;
-    int uniformCount = 0;
-    unsigned char uniformByte = 0;
-
-    while((read = fread(buffer, 1, 0x40000, f)) > 0) {
-
-        // get the disc info from the first block
-        if (discInfo == NULL) {
-
-        }
-
-        // get the junk block for this block number
-        unsigned char * junk = getJunkBlock(i++, discInfo->id, discInfo->disc_number);
-
-        unsigned char * uniformBytePtr;
-        if((uniformBytePtr = isUniform(buffer, read)) != NULL) {
-            if (dataCount > 0){
-                printf("%0d blocks of data\n", dataCount);
-                dataCount = 0;
-            }
-            if (junkCount > 0) {
-                printf("%0d blocks of junk\n", junkCount);
-                junkCount = 0;
-            }
-            
-            if (uniformCount == 0 || uniformByte == *uniformBytePtr) {
-                uniformCount++;    
-            } else {
-                // if this is a different junk byte dump count and 
-                // start counting over with the new junk byte
-                printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
-                uniformByte = *uniformBytePtr;
-                uniformCount = 1;
-            }
-        } else if (isSame(buffer, junk, read)) {
-            if (dataCount > 0){
-                printf("%0d blocks of data\n", dataCount);
-                dataCount = 0;
-            }
-            if (uniformCount > 0){
-                printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
-                uniformCount = 0;
-            }
-            junkCount++;
         } else {
-            if (junkCount > 0) {
-                printf("%0d blocks of junk\n", junkCount);
-                junkCount = 0;
-            }
-            if (uniformCount > 0){
-                printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
-                uniformCount = 0;
-            }
-            dataCount++;
+            uint64_t address =  ((uint64_t) discInfo->table[(i * 8) + 7] << 0) +
+                                ((uint64_t) discInfo->table[(i * 8) + 6] << 8) +
+                                ((uint64_t) discInfo->table[(i * 8) + 5] << 16) +
+                                ((uint64_t) discInfo->table[(i * 8) + 4] << 24) +
+                                ((uint64_t) discInfo->table[(i * 8) + 3] << 32) +
+                                ((uint64_t) discInfo->table[(i * 8) + 2] << 40) +
+                                ((uint64_t) discInfo->table[(i * 8) + 1] << 48) +
+                                ((uint64_t) discInfo->table[(i * 8) + 0] << 56);
+
+            fprintf(stderr, "ERROR: Saw a data block but address was wrong\n");
+            fprintf(stderr, "%d %d\n", shrunkBlockNum, address);
+            break;
         }
     }
-    if (dataCount > 0){
-        printf("%0d blocks of data\n", dataCount);
-        dataCount = 0;
-    }
-    if (junkCount > 0) {
-        printf("%0d blocks of junk\n", junkCount);
-        junkCount = 0;
-    }
-    if (uniformCount > 0){
-        printf("%0d blocks of uniform %02x\n", uniformCount, uniformByte);
-        uniformCount = 0;
-    }
-
-    fclose(f);
 }
 
 int main(int argc, char *argv[])
@@ -294,16 +101,12 @@ int main(int argc, char *argv[])
     char *inputFile = NULL;
     char *outputFile = NULL;
     bool doProfile = false;
-    bool doProfile2 = false;
 
     int opt;
     while ((opt = getopt(argc, argv, "i:o:pq")) != -1) {
         switch (opt) {
             case 'p':
                 doProfile = true;
-                break;
-            case 'q':
-                doProfile2 = true;
                 break;
             case 'i':
                 inputFile = optarg; 
@@ -322,10 +125,12 @@ int main(int argc, char *argv[])
     }
 
     if (doProfile) {
-        printProfile(profile(inputFile));
-        // profile2(inputFile);
-    }
-    if (doProfile2) {
-        profile2(inputFile);
+        struct DiscInfo * discInfo = profileImage(inputFile);
+        printDiscInfo(discInfo);
+    } else {
+        // Creating a shrunken image will take two passes.
+        // One to prifile the disc and one to do the write the shrunken image
+        struct DiscInfo * discInfo = profileImage(inputFile);
+        createShrunkImage(discInfo, inputFile, outputFile);
     }
 }
