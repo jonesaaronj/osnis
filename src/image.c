@@ -107,6 +107,7 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
 
     // Do all of our reading in 0x40000 byte blocks
     unsigned char * buffer = calloc(1, BLOCK_SIZE);
+    unsigned char * repeatByte;
     
     // write partition block
     if (fwrite(discInfo->table, BLOCK_SIZE, 1, outputF) != 1) {
@@ -146,6 +147,15 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         else if (isSame(buffer, junk, read)) {
             if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + ((blockNum + 1) * 8), 8) != 0) {
                 fprintf(stderr, "ERROR: Saw a junk block at %zu but expected something else\n", blockNum);
+                break;
+            }
+        }
+
+        // if this is a repeated block skip writing it
+        else if((repeatByte = isUniform(buffer, read)) != NULL) {
+            if (memcmp(&FFs, discInfo->table + ((blockNum + 1) * 8), 4) != 0 || 
+                memcmp(repeatByte, discInfo->table + ((blockNum + 1) * 8) + 7, 1) != 0 ) {
+                fprintf(stderr, "ERROR: Saw a repeat block at %zu but expected something else\n", blockNum);
                 break;
             }
         }

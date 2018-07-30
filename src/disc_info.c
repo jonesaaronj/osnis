@@ -19,7 +19,6 @@ struct DiscInfo * profileImage(char *file)
     
     // Do all of our reading in 0x40000 byte blocks
     unsigned char * buffer = calloc(1, BLOCK_SIZE);
-    
     unsigned char * repeatByte;
 
     // force our blockNum to be an unsigned 64 bit int (8 bytes * 8 bits)
