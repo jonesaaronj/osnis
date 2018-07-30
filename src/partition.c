@@ -25,7 +25,7 @@ struct DiscInfo * profileImage(char *file)
     uint64_t blockNum = 0;
     uint32_t dataBlockNum = 1;
     size_t read;
-    while((read = fread(buffer, BLOCK_SIZE, 1, f)) > 0) {
+    while((read = fread(buffer, 1, BLOCK_SIZE, f)) > 0) {
 
         // get the disc info from the first block
         if (blockNum == 0) {
@@ -136,12 +136,12 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
 
         if (discInfo->table == NULL) {
             // create a partition table
-            discInfo->table = calloc(1, BLOCK_SIZE);
+            discInfo->table = calloc(BLOCK_SIZE, 1);
 
             // write the shrunken magic word to the partition table
             memcpy(discInfo->table, SHRUNKEN_MAGIC_WORD, 9);
 
-            // set disc info in partition table
+            // set disc id in partition table
             memcpy(discInfo->table + 8, discInfo->discId, 6);
 
             // set the disc number in the partition table
