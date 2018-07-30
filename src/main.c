@@ -14,7 +14,7 @@ void handleFiles(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
 void unshrinkImage(char *inputFile, char *outputFile) {
     // if file pointer is empty read from stdin
     FILE *inputF = (inputFile != NULL) ? fopen(inputFile, "rb") : stdin;
-    // if file pointer is empty read from stdout
+    // if file pointer is empty write to stdout
     FILE *outputF = (outputFile != NULL) ? fopen(outputFile, "wb") : stdout;
 
     struct DiscInfo *discInfo = calloc(sizeof(struct DiscInfo), 1);
@@ -24,7 +24,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
 
     // get the partition table from the first block
     if (fread(buffer, BLOCK_SIZE, 1, inputF) != 1){
-        fprintf(stderr, "ERROR: could not read block\n");
+        fprintf(stderr, "ERROR: could not read partition table\n");
         return;
     }
     getDiscInfo(discInfo, buffer);
@@ -42,8 +42,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     size_t lastBlockSize = discInfo->isGC ? GC_LAST_BLOCK_SIZE :
         discInfo->isWII && discInfo->isDualLayer ? WII_DL_LAST_BLOCK_SIZE : WII_LAST_BLOCK_SIZE;
 
-    int blockNum;
-    for(blockNum = 1; blockNum < discBlockNum; blockNum++) {
+    for(int blockNum = 2; blockNum < discBlockNum; blockNum++) {
         
         // set the block size to write
         size_t writeSize = (blockNum == discBlockNum) ? lastBlockSize : BLOCK_SIZE;
@@ -80,8 +79,10 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                 }
             }
         }
-        
+
     }
+    fclose(inputF);
+    fclose(outputF);
 }
 
 /**
@@ -174,6 +175,8 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
 
         blockNum++;
     }
+    fclose(inputF);
+    fclose(outputF);
 }
 
 int main(int argc, char *argv[])

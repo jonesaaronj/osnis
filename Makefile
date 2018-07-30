@@ -3,7 +3,7 @@ CFLAGS = -std=c99 -Wall
 SRC_DIR = src
 TARGET = osni
 
-all: $(TARGET)
+all: clean $(TARGET)
 
 $(TARGET): src/main.c
 	$(CC) $(CFLAGS) -o $(TARGET) src/main.c src/partition.c src/hash.c src/crc32.c
