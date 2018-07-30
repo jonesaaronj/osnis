@@ -148,7 +148,7 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
 
         // if we got this far we should be a data block
         // make sure our table has the correct address and crc
-        else if (memcmp(&dataBlockNum, discInfo->table + ((blockNum + 1) * 8), 4) == 0) // &&
+        else if (memcmp(&dataBlockNum, discInfo->table + ((blockNum + 1) * 8), 4) == 0) { // &&
                  //memcmp(&crc_32, discInfo->table + ((blockNum + 1) * 8) + 4, 4) == 0) {
             if (fwrite(buffer, writeSize, 1, outputF) != 1) {
                 fprintf(stderr, "ERROR: could not write block\n");
