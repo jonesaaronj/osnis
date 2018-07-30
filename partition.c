@@ -116,7 +116,7 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
         discInfo->discNumber = data[6];
 
         // the disc name comes at byte 32
-        size_t nameLength = strnlen(data + 32, 100);
+        size_t nameLength = strlen(data + 32);
         discInfo->discName = calloc(1, nameLength + 1);
         memcpy(discInfo->discName, data + 32, nameLength);
 
