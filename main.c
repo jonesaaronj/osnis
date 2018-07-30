@@ -68,7 +68,7 @@ void createShrunkImage(struct DiscInfo * discInfo, char *inputFile, char *output
         // if this is a junk block skip writing it
         else if (isSame(buffer, junk, read)) {
             if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + ((blockNum + 1) * 8), 8) != 0) {
-                fprintf(stderr, "ERROR: Saw a junk block at %lu but expected something else\n", blockNum);
+                fprintf(stderr, "ERROR: Saw a junk block at %llu but expected something else\n", blockNum);
                 break;
             }
         }
@@ -93,8 +93,8 @@ void createShrunkImage(struct DiscInfo * discInfo, char *inputFile, char *output
                                 ((uint64_t) discInfo->table[((blockNum + 1) * 8) + 1] << 48) +
                                 ((uint64_t) discInfo->table[((blockNum + 1) * 8) + 0] << 56);
 
-            fprintf(stderr, "ERROR: Saw a data block but address was wrong at %lu ", blockNum);
-            fprintf(stderr, "expected %lu but %lu is in the table\n", dataBlockNum, address);
+            fprintf(stderr, "ERROR: Saw a data block but address was wrong at %llu ", blockNum);
+            fprintf(stderr, "expected %llu but %llu is in the table\n", dataBlockNum, address);
             break;
         }
 
