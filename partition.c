@@ -204,5 +204,5 @@ void printDiscInfo(struct DiscInfo * discInfo) {
 
     printf("%05d TOTAL BLOCKS\n", blockNum - 1);
 
-    printf("%05d TOTAL SHRUNKEN BLOCKS\n", discInfo->shrunkenSize);
+    printf("%05ld TOTAL SHRUNKEN BLOCKS\n", discInfo->shrunkenSize);
 }
