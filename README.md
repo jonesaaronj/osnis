@@ -32,14 +32,8 @@ Counting always includes the partition block and the first block.
 So, if I want a block of data at a particular location just look up that block number in the partition table block
 and then pull the full 0x40000 from the shrunken image at the given location
 
-Repeated junk block - a block of repeated bytes
-00-06 FF,FF,FF,FF,00,00,00
-07 the character/byte being repeated
-This is well beyond the max block size of any image so it will never be confused with an actual block address
-To recreate this block just repeat the char/byte at 07 0x40000 times and return the block
-
 Generated junk block - a block of junk generated from the fancy algorithm
-00-07 FF,FF,FF,FF,FF,FF,FF,FF 
+00-07 FF,FF,'J','U','N','K',FF,FF
 This is well beyond the max block size of any image so it will never be confused with an actual block address
 The block number will still equate directly to the same block number in a real disk so regenerating 
 this data will be as simple as calling the generateJunkData function on the discId, discNum and block number
@@ -47,3 +41,9 @@ this data will be as simple as calling the generateJunkData function on the disc
 
 00-07 0x00
 Once we see an entry of all 0's we are at the end of our image and can ignore all future blocks, which should also be zero.
+
+
+
+block:0,1,2
+shrnk:p,
+partt:

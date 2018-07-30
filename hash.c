@@ -4,19 +4,21 @@
 #include <string.h>
 #include "hash.h"
 
-/**
- * Determine if the two char arrays are the same for lenth
- * 
- * param - unsigned char a[]
- * param - unsigned char b[]
- * param - int length
- *
- * returns - true if the two arrays are the sames
- */
-bool isSame(unsigned char a[], unsigned char b[], int length)
+void printHex(unsigned char * a, int length)
 {
     for (int i = 0; i < length; i++) {
-        if (a[i] != b[i]) {
+        printf("%02X", a[i]);
+    }
+    printf("\n");
+}
+
+/**
+ * Determine if the two char arrays are the same for lenth
+ */
+bool isSame(unsigned char * a, unsigned char * b, int length)
+{
+    for (int i = 0; i < length; i++) {
+        if (memcmp(a + i, b + i, 1) != 0) {
             return false;
         }
     }
@@ -72,7 +74,7 @@ void a10002710(unsigned int sample, unsigned int buffer[])
  */
 unsigned char * getJunkBlock(unsigned int blockCount, unsigned char id[], unsigned char discNumber)
 {
-    static unsigned char garbageBlock[0x40000] = {0};
+    unsigned char * garbageBlock = calloc(1, BLOCK_SIZE);
     
     unsigned int buffer[0x824] = {0};
     unsigned int sample = 0;

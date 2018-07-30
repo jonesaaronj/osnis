@@ -15,27 +15,29 @@ struct DiscInfo * profileImage(char *file)
     FILE *f = (file != NULL) ? fopen(file, "rb") : stdin;
 
     // Do all of our reading in 0x40000 byte blocks
-    unsigned char buffer[BLOCK_SIZE];
+    unsigned char * buffer = calloc(1, BLOCK_SIZE);
     size_t read;
 
-    struct DiscInfo *discInfo = malloc(sizeof(struct DiscInfo));
+    struct DiscInfo *discInfo = calloc(sizeof(struct DiscInfo), 1);
     
     // force our blockNum to be an unsigned 64 bit int (8 bytes * 8 bits)
     // to make copying to the partition table easier
     uint64_t blockNum = 0;
-    uint64_t shrunkenBlockNum = 1;
+    uint64_t dataBlockNum = 1;
     while((read = fread(buffer, 1, BLOCK_SIZE, f)) > 0) {
 
         // get the disc info from the first block
         if (blockNum == 0) {
             getDiscInfo(discInfo, buffer);
             blockNum++;
+            dataBlockNum++;
             continue;
         }
 
-        // if the first block has the shrunken magic word
-        // the rest of the disc info is in the second block
-        if (blockNum == 1 & discInfo->isShrunken) {
+        // if the first block has the shrunken magic word this 
+        // is a shrunken image and the first block is the partition
+        // table and the disc info will be in the second block
+        if (blockNum == 1 && discInfo->isShrunken) {
             getDiscInfo(discInfo, buffer);
             return discInfo;
         }
@@ -43,29 +45,28 @@ struct DiscInfo * profileImage(char *file)
         // get the junk block for this block number
         unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
 
-        // check if this is a generated junk block
+        // check if this is a junk block
         if (isSame(buffer, junk, read)) {
-            // Write a block of FF's to our partition table
-            memcpy(discInfo->table + (blockNum * 8), &FFs, 8);
-        } 
+            // Write the junk block magic word to our partition table
+            memcpy(discInfo->table + ((blockNum + 1)* 8), &JUNK_BLOCK_MAGIC_WORD, 8);
+        }
 
         // If this is not a junk block then it is a data block
         else {
-            // Write the block number to the partition table
-            shrunkenBlockNum++;
-            memcpy(discInfo->table + (blockNum * 8), &shrunkenBlockNum, 8);
+            memcpy(discInfo->table + ((blockNum + 1) * 8), &dataBlockNum, 8);
+            dataBlockNum++;
         }
         blockNum++;
     }
     fclose(f);
 
-    discInfo->shrunkenSize = shrunkenBlockNum;
+    discInfo->shrunkenSize = dataBlockNum - 1;
 
-    if (blockNum > 32467) {
+    if (blockNum + 1 == WII_DL_BLOCK_NUM) {
         discInfo->isDualLayer = true;
     }
 
-    discInfo->table[7] = discInfo->isGC ? GC_DISC :
+    discInfo->table[8 + 7] = discInfo->isGC ? GC_DISC :
         discInfo->isWII && discInfo->isDualLayer ? WII_DL_DISC : WII_DISC;
 
     return discInfo;
@@ -79,10 +80,8 @@ struct DiscInfo * profileImage(char *file)
  */
 void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
 {
-	// struct DiscInfo *discInfo = malloc(sizeof(struct DiscInfo));
-
-    // check for the shrunken magic word
-    bool isShrunken = memcmp(data, SHRUNKEN_MAGIC_WORD, 8) == 0;
+	// check for the shrunken magic word
+    bool isShrunken = memcmp(SHRUNKEN_MAGIC_WORD, data, 8) == 0;
 
     // if this is a shrunken disc image the first block
     // is the partition table and the second block has all the
@@ -90,7 +89,7 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
     if (isShrunken) {
 
         // create a partition table
-        discInfo->table = malloc(sizeof(char) * BLOCK_SIZE);
+        discInfo->table = calloc(1, BLOCK_SIZE);
         memcpy(discInfo->table, data, BLOCK_SIZE);
         discInfo->isShrunken = true;
 
@@ -110,20 +109,19 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
 
     } else {
     	// the disc id comes from bytes 0 through 5
-        discInfo->discId = malloc(7);
+        discInfo->discId = calloc(1, 7);
         memcpy(discInfo->discId, data, 6);
-        memset(discInfo->discId + 6, 0, 1);
         
         // the disc number comes from byte 6
         discInfo->discNumber = data[6];
 
         // the disc name comes at byte 32
         size_t nameLength = strnlen(data + 32, 100);
-        discInfo->discName = malloc(sizeof(char) * nameLength + 1);
-        memcpy(discInfo->discName, data + 32, nameLength + 1);
+        discInfo->discName = calloc(1, nameLength + 1);
+        memcpy(discInfo->discName, data + 32, nameLength);
 
-        discInfo->isGC = memcmp(data + 28, GC_MAGIC_WORD, 4) == 0;
-        discInfo->isWII = memcmp(data + 24, WII_MAGIC_WORD, 4) == 0;
+        discInfo->isGC = memcmp(GC_MAGIC_WORD, data + 28, 4) == 0;
+        discInfo->isWII = memcmp(WII_MAGIC_WORD, data + 24, 4) == 0;
 
         if (!discInfo->isGC && !discInfo->isWII) {
             fprintf(stderr, "ERROR: We are not a GC or WII disc\n");
@@ -132,11 +130,10 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
 
         if (discInfo->table == NULL) {
             // create a partition table
-            discInfo->table = malloc(sizeof(char) * BLOCK_SIZE);
-            memset(discInfo->table, 0, BLOCK_SIZE);
+            discInfo->table = calloc(1, BLOCK_SIZE);
 
             // write the shrunken magic word to the partition table
-            memcpy(discInfo->table, SHRUNKEN_MAGIC_WORD, 8);
+            memcpy(discInfo->table, SHRUNKEN_MAGIC_WORD, 9);
 
             // set disc info in partition table
             memcpy(discInfo->table + 8, discInfo->discId, 6);
@@ -177,11 +174,12 @@ void printDiscInfo(struct DiscInfo * discInfo) {
         }
 
         // if 8 FFs we are a junk block
-        else if (memcmp(&FFs, discInfo->table + (blockNum * 8), 8) == 0) {
+        else if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + (blockNum * 8), 8) == 0) {
             if (dataCount > 0){
                 printf("%05d blocks of data\n", dataCount);
                 dataCount = 0;
             }
+            // printf("junk block at %d\n", blockNum);
             junkCount++;
         }
 
@@ -191,6 +189,7 @@ void printDiscInfo(struct DiscInfo * discInfo) {
                 printf("%05d blocks of junk\n", junkCount);
                 junkCount = 0;
             }
+            // printf("data block at %d\n", blockNum);
             dataCount++;
         }
     }
