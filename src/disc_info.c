@@ -30,7 +30,7 @@ struct DiscInfo * profileImage(char *file)
     while((read = fread(buffer, 1, BLOCK_SIZE, f)) > 0) {
 
         if((repeatByte = isUniform(buffer, read)) != NULL) {
-            fprintf(stderr, "Saw a repeat char: %x\n", *repeatByte);
+            fprintf(stderr, "Saw a repeat char: %x at %d\n", *repeatByte, blockNum);
         }
 
         
