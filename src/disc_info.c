@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "hash.h"
-#include "partition.h"
+#include "disc_info.h"
 #include "crc32.h"
 
 /*
@@ -140,12 +140,6 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
 
             // write the shrunken magic word to the partition table
             memcpy(discInfo->table, SHRUNKEN_MAGIC_WORD, 9);
-
-            // set disc id in partition table
-            memcpy(discInfo->table + 8, discInfo->discId, 6);
-
-            // set the disc number in the partition table
-            memcpy(discInfo->table + 8 + 6, &discInfo->discNumber, 1);
         }
     }
 }
