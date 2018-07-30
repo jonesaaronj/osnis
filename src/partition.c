@@ -15,17 +15,17 @@ struct DiscInfo * profileImage(char *file)
     // if file pointer is empty read from stdin
     FILE *f = (file != NULL) ? fopen(file, "rb") : stdin;
 
+    struct DiscInfo *discInfo = calloc(sizeof(struct DiscInfo), 1);
+    
     // Do all of our reading in 0x40000 byte blocks
     unsigned char * buffer = calloc(1, BLOCK_SIZE);
-    size_t read;
-
-    struct DiscInfo *discInfo = calloc(sizeof(struct DiscInfo), 1);
     
     // force our blockNum to be an unsigned 64 bit int (8 bytes * 8 bits)
     // to make copying to the partition table easier
     uint64_t blockNum = 0;
     uint32_t dataBlockNum = 1;
-    while((read = fread(buffer, 1, BLOCK_SIZE, f)) > 0) {
+    size_t read;
+    while((read = fread(buffer, BLOCK_SIZE, 1, f)) > 0) {
 
         // get the disc info from the first block
         if (blockNum == 0) {
@@ -59,8 +59,8 @@ struct DiscInfo * profileImage(char *file)
             dataBlockNum++;
 
             // copy the crc32 to the table
-            uint32_t crc32 = crc_32(buffer, read, 0);
-            memcpy(discInfo->table + ((blockNum + 1) * 8) + 4, &crc32, 4);
+            uint32_t crc_32 = crc32(buffer, read, 0);
+            memcpy(discInfo->table + ((blockNum + 1) * 8) + 4, &crc_32, 4);
         }
         blockNum++;
     }
@@ -122,7 +122,7 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
         discInfo->discNumber = data[6];
 
         // the disc name comes at byte 32
-        size_t nameLength = strlen(data + 32);
+        size_t nameLength = strlen((const char *) data + 32);
         discInfo->discName = calloc(1, nameLength + 1);
         memcpy(discInfo->discName, data + 32, nameLength);
 

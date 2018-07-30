@@ -62,6 +62,24 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                 break;
             }
         }
+
+        // otherwise we are a data block
+        else {
+            size_t read;
+            // read the data block
+            if ((read = fread(buffer, 1, BLOCK_SIZE, inputF)) != BLOCK_SIZE){
+                fprintf(stderr, "ERROR: could not read block\n");
+                return;
+            }
+            // check the crc32 of the data block and write if everthing is fine
+            uint32_t crc_32 = crc32(buffer, read, 0);
+            if (memcmp(&crc_32, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
+                if (fwrite(buffer, writeSize, 1, outputF) != 1) {
+                    fprintf(stderr, "ERROR: could not write block\n");
+                    break;
+                }
+            }
+        }
         
     }
 }
@@ -108,7 +126,7 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
 
         // get the crc32 of the data block
-        uint32_t crc32 = crc_32(buffer, read, 0);
+        uint32_t crc_32 = crc32(buffer, read, 0);
         
         // make sure the first data block has the correct id and disc number
         if (blockNum == 0) {
@@ -133,9 +151,9 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         }
 
         // if we got this far we should be a data block
-        // make sure our table has the correct address
+        // make sure our table has the correct address and crc
         else if (memcmp(&dataBlockNum, discInfo->table + ((blockNum + 1) * 8), 4) == 0 &&
-                 memcmp(&crc32, discInfo->table + ((blockNum + 1) * 8) + 4, 4) == 0) {
+                 memcmp(&crc_32, discInfo->table + ((blockNum + 1) * 8) + 4, 4) == 0) {
             if (fwrite(buffer, writeSize, 1, outputF) != 1) {
                 fprintf(stderr, "ERROR: could not write block\n");
                 break;
