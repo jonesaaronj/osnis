@@ -20,6 +20,8 @@ struct DiscInfo * profileImage(char *file)
     // Do all of our reading in 0x40000 byte blocks
     unsigned char * buffer = calloc(1, BLOCK_SIZE);
     
+    unsigned char * repeatByte;
+
     // force our blockNum to be an unsigned 64 bit int (8 bytes * 8 bits)
     // to make copying to the partition table easier
     uint64_t blockNum = 0;
@@ -27,6 +29,11 @@ struct DiscInfo * profileImage(char *file)
     size_t read;
     while((read = fread(buffer, 1, BLOCK_SIZE, f)) > 0) {
 
+        if((repeatByte = isUniform(buffer, read)) != NULL) {
+            fprintf(stderr, "Saw a repeat char: %x\n", *repeatByte);
+        }
+
+        
         // get the disc info from the first block
         if (blockNum == 0) {
             getDiscInfo(discInfo, buffer);

@@ -6,6 +6,11 @@
 static const size_t BLOCK_SIZE = 0x40000;
 
 /**
+ * Determine if the char array is fillied with the same char for a given length
+ */
+unsigned char * isUniform(unsigned char *a, int length);
+
+/**
  * Determine if the two char arrays are the same for a given lenth
  */
 bool isSame(unsigned char * a, unsigned char * b, int length);

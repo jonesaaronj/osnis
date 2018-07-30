@@ -5,6 +5,21 @@
 #include "hash.h"
 
 /**
+ * Determine if the char array is fillied with the same char for a given length
+ */
+unsigned char * isUniform(unsigned char *a, int length)
+{
+    unsigned char *c = a;
+    for (int i = 0; i < length; i++) {
+        if (a[i] != *c) {
+            return NULL;
+        }
+    }
+    return c;
+}
+
+
+/**
  * Determine if the two char arrays are the same for a given length
  */
 bool isSame(unsigned char * a, unsigned char * b, int length)
