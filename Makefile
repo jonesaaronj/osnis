@@ -6,7 +6,7 @@ TARGET = osni
 all: $(TARGET)
 
 $(TARGET): src/main.c
-	$(CC) $(CFLAGS) -o $(TARGET) src/main.c src/partition.c src/hash.c
+	$(CC) $(CFLAGS) -o $(TARGET) src/main.c src/partition.c src/hash.c src/crc32.c
 
 clean:
 	rm -f $(TARGET)

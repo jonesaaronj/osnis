@@ -4,6 +4,7 @@
 #include <string.h>
 #include "hash.h"
 #include "partition.h"
+#include "crc32.h"
 
 /*
  * Profile a disk.  Expects a full iso with valid 
@@ -23,7 +24,7 @@ struct DiscInfo * profileImage(char *file)
     // force our blockNum to be an unsigned 64 bit int (8 bytes * 8 bits)
     // to make copying to the partition table easier
     uint64_t blockNum = 0;
-    uint64_t dataBlockNum = 1;
+    uint32_t dataBlockNum = 1;
     while((read = fread(buffer, 1, BLOCK_SIZE, f)) > 0) {
 
         // get the disc info from the first block
@@ -53,8 +54,13 @@ struct DiscInfo * profileImage(char *file)
 
         // If this is not a junk block then it is a data block
         else {
-            memcpy(discInfo->table + ((blockNum + 1) * 8), &dataBlockNum, 8);
+            // copy the block number to the table
+            memcpy(discInfo->table + ((blockNum + 1) * 8), &dataBlockNum, 4);
             dataBlockNum++;
+
+            // copy the crc32 to the table
+            uint32_t crc32 = crc_32(buffer, read, 0);
+            memcpy(discInfo->table + ((blockNum + 1) * 8) + 4, &crc32, 4);
         }
         blockNum++;
     }
@@ -88,7 +94,7 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
     // disc info
     if (isShrunken) {
 
-        // create a partition table
+        // create a partition table using the data
         discInfo->table = calloc(1, BLOCK_SIZE);
         memcpy(discInfo->table, data, BLOCK_SIZE);
         discInfo->isShrunken = true;

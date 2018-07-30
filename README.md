@@ -18,32 +18,13 @@ Then each block will have 8 bytes available to describe it
 The first block will be a magic number to identify a shrunken image
 00-07 "SHRUNKEN"
 
-The second block will contain the Disc id, Disc Number, and Disc Type.  
-The second full block from the iso will always be available as the second block in the shrunken image
-00-05 Disc Id
-06 Disc Number
-07 Disc Type 1=GC Single Layer 2=WII Single Layer 3=WII Dual Layer
-
-Then each subsequent block is described as such
-
 Data block - a block of real data
-00-07 the block number where this block can be found in the shrunken image. Just treat the whole 8 bytes like an unsigned int.
-Counting always includes the partition block and the first block.
-So, if I want a block of data at a particular location just look up that block number in the partition table block
-and then pull the full 0x40000 from the shrunken image at the given location
+00-03 block number in the shrunken image
+04-07 CRC32 of the data block
 
 Generated junk block - a block of junk generated from the fancy algorithm
 00-07 FF,FF,'J','U','N','K',FF,FF
-This is well beyond the max block size of any image so it will never be confused with an actual block address
-The block number will still equate directly to the same block number in a real disk so regenerating 
-this data will be as simple as calling the generateJunkData function on the discId, discNum and block number
 
-
+No Data
 00-07 0x00
 Once we see an entry of all 0's we are at the end of our image and can ignore all future blocks, which should also be zero.
-
-
-
-block:0,1,2
-shrnk:p,
-partt:
