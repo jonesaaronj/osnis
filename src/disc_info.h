@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 static const unsigned char JUNK_BLOCK_MAGIC_WORD[8] = {0xff, 0xff, 0xff, 0xff, 'J', 'U', 'N', 'K'};
+static const uint64_t FFs  = 0xFFFFFFFFFFFFFFFF;
 static const uint64_t ZERO = 0x0;
 
 static const unsigned char GC_DISC = 1;

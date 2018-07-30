@@ -29,11 +29,6 @@ struct DiscInfo * profileImage(char *file)
     size_t read;
     while((read = fread(buffer, 1, BLOCK_SIZE, f)) > 0) {
 
-        if((repeatByte = isUniform(buffer, read)) != NULL) {
-            fprintf(stderr, "Saw a repeat char: %x at %d\n", *repeatByte, blockNum);
-        }
-
-        
         // get the disc info from the first block
         if (blockNum == 0) {
             getDiscInfo(discInfo, buffer);
@@ -57,6 +52,13 @@ struct DiscInfo * profileImage(char *file)
         if (isSame(buffer, junk, read)) {
             // Write the junk block magic word to our partition table
             memcpy(discInfo->table + ((blockNum + 1)* 8), &JUNK_BLOCK_MAGIC_WORD, 8);
+        }
+
+        // check if we are repeated junk data
+        else if((repeatByte = isUniform(buffer, read)) != NULL) {
+            // write our repeated byte to the partition table
+            memcpy(discInfo->table + ((blockNum + 1)* 8), &FFs, 4);
+            memcpy(discInfo->table + ((blockNum + 1)* 8) + 7, repeatByte, 1);
         }
 
         // If this is not a junk block then it is a data block
@@ -171,6 +173,7 @@ void printDiscInfo(struct DiscInfo * discInfo) {
 
     int dataCount = 0;
     int junkCount = 0;
+    int repeatCount = 0;
     
     int blockNum;
     for(blockNum = 1; blockNum < BLOCK_SIZE; blockNum++) {
@@ -180,14 +183,30 @@ void printDiscInfo(struct DiscInfo * discInfo) {
             break;
         }
 
-        // if 8 FFs we are a junk block
+        // if you see the junk magic word this is a junk block
         else if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + (blockNum * 8), 8) == 0) {
             if (dataCount > 0){
                 printf("%05d blocks of data\n", dataCount);
                 dataCount = 0;
             }
-            // printf("junk block at %d\n", blockNum);
+            if (repeatCount > 0){
+                printf("%05d blocks of repeat\n", repeatCount);
+                repeatCount = 0;
+            }
             junkCount++;
+        }
+
+        // if 4 FFs we are a repeat block
+        else if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
+            if (junkCount > 0) {
+                printf("%05d blocks of junk\n", junkCount);
+                junkCount = 0;
+            }
+            if (dataCount > 0){
+                printf("%05d blocks of data\n", dataCount);
+                dataCount = 0;
+            }
+            repeatCount++;
         }
 
         // we are a data block
@@ -196,7 +215,10 @@ void printDiscInfo(struct DiscInfo * discInfo) {
                 printf("%05d blocks of junk\n", junkCount);
                 junkCount = 0;
             }
-            // printf("data block at %d\n", blockNum);
+            if (repeatCount > 0){
+                printf("%05d blocks of repeat\n", repeatCount);
+                repeatCount = 0;
+            }
             dataCount++;
         }
     }
@@ -207,6 +229,10 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     if (junkCount > 0) {
         printf("%05d blocks of junk\n", junkCount);
         junkCount = 0;
+    }
+    if (repeatCount > 0) {
+        printf("%05d blocks of repeat\n", repeatCount);
+        repeatCount = 0;
     }
 
     printf("%05d TOTAL BLOCKS\n", blockNum - 1);
