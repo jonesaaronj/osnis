@@ -130,7 +130,7 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         uint32_t crc_32 = crc32(buffer, read, 0);
         
         // if this is a junk block skip writing it
-        else if (isSame(buffer, junk, read)) {
+        if (isSame(buffer, junk, read)) {
             if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + ((blockNum + 1) * 8), 8) != 0) {
                 fprintf(stderr, "ERROR: Saw a junk block at %zu but expected something else\n", blockNum);
                 break;
