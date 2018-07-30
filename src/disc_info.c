@@ -31,15 +31,12 @@ struct DiscInfo * profileImage(char *file)
         // get the disc info from the first block
         if (blockNum == 0) {
             getDiscInfo(discInfo, buffer);
-            blockNum++;
-            dataBlockNum++;
-            continue;
         }
 
         // if the first block has the shrunken magic word this 
         // is a shrunken image and the first block is the partition
         // table and the disc info will be in the second block
-        if (blockNum == 1 && discInfo->isShrunken) {
+        else if (blockNum == 1 && discInfo->isShrunken) {
             getDiscInfo(discInfo, buffer);
             return discInfo;
         }

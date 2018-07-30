@@ -129,20 +129,6 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         // get the crc32 of the data block
         uint32_t crc_32 = crc32(buffer, read, 0);
         
-        // make sure the first data block has the correct id and disc number
-        if (blockNum == 0) {
-            dataBlockNum++;
-            if (memcmp(buffer, discInfo->table + 8, 7) == 0) {
-                if (fwrite(buffer, writeSize, 1, outputF) != 1) {
-                    fprintf(stderr, "ERROR: could not write block\n");
-                    break;
-                }
-            } else {
-                fprintf(stderr, "ERROR: disc info does not match\n");
-                break;
-            }
-        }
-
         // if this is a junk block skip writing it
         else if (isSame(buffer, junk, read)) {
             if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + ((blockNum + 1) * 8), 8) != 0) {
