@@ -4,14 +4,6 @@
 #include <string.h>
 #include "hash.h"
 
-void printHex(unsigned char * a, int length)
-{
-    for (int i = 0; i < length; i++) {
-        printf("%02X", a[i]);
-    }
-    printf("\n");
-}
-
 /**
  * Determine if the two char arrays are the same for lenth
  */
@@ -81,7 +73,7 @@ unsigned char * getJunkBlock(unsigned int blockCount, unsigned char id[], unsign
     blockCount = blockCount * 8 * 0x1ef29123;
     
     int j = 0;
-    for (int i = 0; i < 0x40000; i += 4) {
+    for (int i = 0; i < BLOCK_SIZE; i += 4) {
         if ((i & 0x00007fff) == 0) {
             sample = (((((unsigned int)id[2] << 0x8) | id[1]) << 0x10) | ((unsigned int)(id[3] + id[2]) << 0x8)) | (unsigned int)(id[0] + id[1]);
             sample = ((sample ^ discNumber) * 0x260bcd5) ^ blockCount;
