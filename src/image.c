@@ -28,9 +28,13 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     }
     getDiscInfo(discInfo, buffer);
 
-    // get the first block of our data
+    // get the first block of our data and write it
     if (fread(buffer, 1, BLOCK_SIZE, inputF) != BLOCK_SIZE){
         fprintf(stderr, "ERROR: could not read block\n");
+        return;
+    }
+    if (fwrite(buffer, 1, BLOCK_SIZE, outputF) != BLOCK_SIZE) {
+        fprintf(stderr, "ERROR: could not write block\n");
         return;
     }
     getDiscInfo(discInfo, buffer);
