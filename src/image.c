@@ -64,7 +64,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         // if 8 FFs we are a junk block
         else if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + (blockNum * 8), 8) == 0) {
             // get the junk block and write it
-            unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
+            unsigned char * junk = getJunkBlock(blockNum - 1, discInfo->discId, discInfo->discNumber);
             if (fwrite(junk, writeSize, 1, outputF) != 1) {
                 fprintf(stderr, "ERROR: could not write block\n");
                 break;
