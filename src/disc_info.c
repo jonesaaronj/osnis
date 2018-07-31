@@ -164,6 +164,9 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     printf("Disc Name: %s\n", discInfo->discName);
     printf("Disc Number: %d\n", discInfo->discNumber);
 
+    uint32_t thisCrc = 0;
+    uint32_t prevCrc = 0;
+
     int dataCount = 0;
     int junkCount = 0;
     int repeatCount = 0;
@@ -204,6 +207,15 @@ void printDiscInfo(struct DiscInfo * discInfo) {
 
         // we are a data block
         else {
+
+            prevCrc = thisCrc;
+            thisCrc = 0;
+            memcpy(&thisCrc, discInfo->table + (blockNum * 8) + 4, 4);
+
+            if (prevCrc == thisCrc) {
+                printf("SAW A REPEAT BLOCK");
+            }
+
             if (junkCount > 0) {
                 printf("%05d blocks of junk\n", junkCount);
                 junkCount = 0;
