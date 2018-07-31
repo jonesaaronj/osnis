@@ -42,15 +42,19 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     size_t lastBlockSize = discInfo->isGC ? GC_LAST_BLOCK_SIZE :
         discInfo->isWII && discInfo->isDualLayer ? WII_DL_LAST_BLOCK_SIZE : WII_LAST_BLOCK_SIZE;
 
-    fprintf(stderr, "Block Num %zu\n", discBlockNum);
-    fprintf(stderr, "Last Block Size %zu\n", lastBlockSize);
+    fprintf(stderr, "Block Num %zd\n", discBlockNum);
+    fprintf(stderr, "Last Block Size %zx\n", lastBlockSize);
 
     uint32_t lastAddr = 0;
     size_t read;
-    for(int blockNum = 2; blockNum < discBlockNum; blockNum++) {
+    for(int blockNum = 2; blockNum <= discBlockNum; blockNum++) {
         
         // set the block size to write
-        size_t writeSize = (blockNum <= discBlockNum) ? BLOCK_SIZE : lastBlockSize;
+        size_t writeSize = (blockNum < discBlockNum - 1) ? BLOCK_SIZE : lastBlockSize;
+        if (read != writeSize) {
+            fprintf(stderr, "ERROR: %d of %zd\n", blockNum, discBlockNum);
+            fprintf(stderr, "ERROR: read %zx != write %zx\n", read, writeSize);
+        }
 
         // if 8 00s we are at the end of the disc
         if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 8) == 0) {
@@ -58,7 +62,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         }
 
         // if 8 FFs we are a junk block
-        else if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + (blockNum * 8), 8) == 0) {
+        else if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + ((blockNum + 1) * 8), 8) == 0) {
             // get the junk block and write it
             unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
             if (fwrite(junk, writeSize, 1, outputF) != 1) {
@@ -70,17 +74,17 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         // otherwise we are a data block
         else {
             // only read a new block in if we are not a repeat bock
-            if (memcmp(&lastAddr, discInfo->table + (blockNum * 8), 4) != 0) {
+            if (memcmp(&lastAddr, discInfo->table + ((blockNum + 1) * 8), 4) != 0) {
                 if ((read = fread(buffer, 1, BLOCK_SIZE, inputF)) != BLOCK_SIZE){
                     fprintf(stderr, "ERROR: could not read block\n");
                     return;
                 }
             }
-            memcpy(&lastAddr, discInfo->table + (blockNum * 8) + 4, 4);
+            memcpy(&lastAddr, discInfo->table + ((blockNum + 1) * 8) + 4, 4);
             
             // check the crc32 of the data block and write if everthing is fine
             uint32_t crc = crc32(buffer, read, 0);
-            if (memcmp(&crc, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
+            if (memcmp(&crc, discInfo->table + ((blockNum + 1) * 8) + 4, 4) == 0) {
                 if (fwrite(buffer, writeSize, 1, outputF) != 1) {
                     fprintf(stderr, "ERROR: could not write block\n");
                     break;
