@@ -108,8 +108,8 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
     size_t lastBlockSize = discInfo->isGC ? GC_LAST_BLOCK_SIZE :
         discInfo->isWII && discInfo->isDualLayer ? WII_DL_LAST_BLOCK_SIZE : WII_LAST_BLOCK_SIZE;
 
-    fprintf(stderr, "Block Num %zu\n", discBlockNum);
-    fprintf(stderr, "Last Block Size %zu\n", lastBlockSize);
+    fprintf(stderr, "Block Num %zd\n", discBlockNum);
+    fprintf(stderr, "Last Block Size %zx\n", lastBlockSize);
 
     // if file pointer is empty read from stdin
     FILE *inputF = (inputFile != NULL) ? fopen(inputFile, "rb") : stdin;
