@@ -47,13 +47,13 @@ struct DiscInfo * profileImage(char *file)
         // check if this is a junk block
         if (isSame(buffer, junk, read)) {
             // Write the junk block magic word to our partition table
-            memcpy(discInfo->table + ((blockNum + 1)* 8), &JUNK_BLOCK_MAGIC_WORD, 8);
+            memcpy(discInfo->table + ((blockNum + 1) * 8), &JUNK_BLOCK_MAGIC_WORD, 8);
         }
 
-        // check if we are repeated junk data
+        // check if this is a repeated junk data
         else if((repeatByte = isUniform(buffer, read)) != NULL) {
             // write our repeated byte to the partition table
-            memcpy(discInfo->table + ((blockNum + 1)* 8), &FFs, 4);
+            memcpy(discInfo->table + ((blockNum + 1) * 8), &FFs, 4);
             memcpy(discInfo->table + ((blockNum + 1)* 8) + 7, repeatByte, 1);
         }
 
@@ -76,9 +76,6 @@ struct DiscInfo * profileImage(char *file)
     if (blockNum + 1 == WII_DL_BLOCK_NUM) {
         discInfo->isDualLayer = true;
     }
-
-    discInfo->table[8 + 7] = discInfo->isGC ? GC_DISC :
-        discInfo->isWII && discInfo->isDualLayer ? WII_DL_DISC : WII_DISC;
 
     return discInfo;
 }
@@ -141,10 +138,10 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
 
         if (discInfo->table == NULL) {
             // create a partition table
-            discInfo->table = calloc(BLOCK_SIZE, 1);
+            discInfo->table = calloc(1, BLOCK_SIZE);
 
             // write the shrunken magic word to the partition table
-            memcpy(discInfo->table, SHRUNKEN_MAGIC_WORD, 9);
+            memcpy(discInfo->table, SHRUNKEN_MAGIC_WORD, 8);
         }
     }
 }

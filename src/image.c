@@ -141,33 +141,38 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         // if this is a repeated block skip writing it
         else if((repeatByte = isUniform(buffer, read)) != NULL) {
             // fprintf(stderr, "skipping repeat block %d\n", blockNum);
-            if (memcmp(&FFs, discInfo->table + ((blockNum + 1) * 8), 4) != 0 || 
-                memcmp(repeatByte, discInfo->table + ((blockNum + 1) * 8) + 7, 1) != 0 ) {
+            if (memcmp(&FFs, discInfo->table + ((blockNum + 1) * 8), 4) != 0) {
                 fprintf(stderr, "ERROR: Saw a repeat block at %zu but expected something else\n", blockNum);
+                break;
+            }
+            if (memcmp(repeatByte, discInfo->table + ((blockNum + 1) * 8) + 7, 1) != 0) {
+                fprintf(stderr, "ERROR: Saw a repeat block at %zu but the repeat byte was wrong\n", blockNum);
                 break;
             }
         }
 
         // if we got this far we should be a data block
         // make sure our table has the correct address and crc
-        else if (memcmp(&dataBlockNum, discInfo->table + ((blockNum + 1) * 8), 4) == 0) { // &&
-                 //memcmp(&crc_32, discInfo->table + ((blockNum + 1) * 8) + 4, 4) == 0) {
+        else {
+            if (memcmp(&dataBlockNum, discInfo->table + ((blockNum + 1) * 8), 4) != 0) {
+                uint32_t address;
+                memcpy(&address, discInfo->table + ((blockNum + 1) * 8), 4);
+                fprintf(stderr, "ERROR: Saw a data block but address was wrong at %zu ", blockNum);
+                fprintf(stderr, "expected %u but %u is in the table\n", dataBlockNum, address);
+                break;
+            }
+            if (memcmp(&crc_32, discInfo->table + ((blockNum + 1) * 8) + 4, 4) != 0) {
+                uint32_t crc;
+                memcpy(&crc, discInfo->table + ((blockNum + 1) * 8) + 4, 4);
+                fprintf(stderr, "ERROR: crc error at %lu\n", blockNum);
+                fprintf(stderr, "%x != %x\n", crc_32, crc);
+                break;
+            }
             if (fwrite(buffer, writeSize, 1, outputF) != 1) {
                 fprintf(stderr, "ERROR: could not write block\n");
                 break;
             }
             dataBlockNum++;
-        }
-
-        else {
-            uint32_t address =  ((uint64_t) discInfo->table[((blockNum + 1) * 8) + 3] << 0) +
-                                ((uint64_t) discInfo->table[((blockNum + 1) * 8) + 2] << 8) +
-                                ((uint64_t) discInfo->table[((blockNum + 1) * 8) + 1] << 16) +
-                                ((uint64_t) discInfo->table[((blockNum + 1) * 8) + 0] << 24) +
-
-            fprintf(stderr, "ERROR: Saw a data block but address was wrong at %zu ", blockNum);
-            fprintf(stderr, "expected %u but %u is in the table\n", dataBlockNum, address);
-            break;
         }
 
         blockNum++;
