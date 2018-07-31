@@ -128,9 +128,10 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
 
         // get the crc32 of the data block
         uint32_t crc_32 = crc32(buffer, read, 0);
-        
+
         // if this is a junk block skip writing it
         if (isSame(buffer, junk, read)) {
+            // fprintf(stderr, "skipping junk block %d\n", blockNum);
             if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + ((blockNum + 1) * 8), 8) != 0) {
                 fprintf(stderr, "ERROR: Saw a junk block at %zu but expected something else\n", blockNum);
                 break;
@@ -139,6 +140,7 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
 
         // if this is a repeated block skip writing it
         else if((repeatByte = isUniform(buffer, read)) != NULL) {
+            // fprintf(stderr, "skipping repeat block %d\n", blockNum);
             if (memcmp(&FFs, discInfo->table + ((blockNum + 1) * 8), 4) != 0 || 
                 memcmp(repeatByte, discInfo->table + ((blockNum + 1) * 8) + 7, 1) != 0 ) {
                 fprintf(stderr, "ERROR: Saw a repeat block at %zu but expected something else\n", blockNum);

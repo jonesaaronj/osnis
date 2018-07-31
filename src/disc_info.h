@@ -4,7 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-static const unsigned char JUNK_BLOCK_MAGIC_WORD[8] = {0xff, 0xff, 0xff, 0xff, 'J', 'U', 'N', 'K'};
+static const unsigned char JUNK_BLOCK_MAGIC_WORD[8] = {0xFF,0xFF,0xFF,0xFF,'J','U','N','K'};
+static const unsigned char JUNK[4] = {'J','U','N','K'};
 static const uint64_t FFs  = 0xFFFFFFFFFFFFFFFF;
 static const uint64_t ZERO = 0x0;
 
