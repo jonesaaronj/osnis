@@ -1,7 +1,7 @@
 CC = cc
 CFLAGS = -std=c99 -Wall
 SRC_DIR = src
-TARGET = osni
+TARGET = osnis
 
 all: clean $(TARGET)
 

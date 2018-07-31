@@ -113,6 +113,7 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         return;
     }
 
+    uint32_t prevCrc = 0;
     uint32_t dataBlockNum = 1;
     size_t blockNum = 0;
     size_t read;
@@ -125,7 +126,7 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
 
         // get the crc32 of the data block
-        uint32_t crc_32 = crc32(buffer, read, 0);
+        uint32_t crc = crc32(buffer, read, 0);
 
         // if this is a junk block skip writing it
         if (isSame(buffer, junk, read)) {
@@ -159,18 +160,22 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
                 fprintf(stderr, "expected %u but %u is in the table\n", dataBlockNum, address);
                 break;
             }
-            if (memcmp(&crc_32, discInfo->table + ((blockNum + 1) * 8) + 4, 4) != 0) {
-                uint32_t crc;
-                memcpy(&crc, discInfo->table + ((blockNum + 1) * 8) + 4, 4);
+            if (memcmp(&crc, discInfo->table + ((blockNum + 1) * 8) + 4, 4) != 0) {
+                uint32_t tableCrc;
+                memcpy(&tableCrc, discInfo->table + ((blockNum + 1) * 8) + 4, 4);
                 fprintf(stderr, "ERROR: crc error at %lu\n", blockNum);
-                fprintf(stderr, "%x != %x\n", crc_32, crc);
+                fprintf(stderr, "Block crc was %x but table crc was %x\n", crc, tableCrc);
                 break;
             }
             if (fwrite(buffer, writeSize, 1, outputF) != 1) {
                 fprintf(stderr, "ERROR: could not write block\n");
                 break;
             }
-            dataBlockNum++;
+            // only advance the block number if this was not a repeat block
+            if (prevCrc != crc) {
+                dataBlockNum++;
+            }
+            prevCrc = crc;
         }
 
         blockNum++;

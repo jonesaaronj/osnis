@@ -21,6 +21,8 @@ struct DiscInfo * profileImage(char *file)
     unsigned char * buffer = calloc(1, BLOCK_SIZE);
     unsigned char * repeatByte;
 
+    uint32_t prevCrc = 0;
+
     // force our blockNum to be an unsigned 64 bit int (8 bytes * 8 bits)
     // to make copying to the partition table easier
     uint64_t blockNum = 0;
@@ -61,11 +63,16 @@ struct DiscInfo * profileImage(char *file)
         else {
             // copy the block number to the table
             memcpy(discInfo->table + ((blockNum + 1) * 8), &dataBlockNum, 4);
-            dataBlockNum++;
 
-            // copy the crc32 to the table
-            uint32_t crc_32 = crc32(buffer, read, 0);
-            memcpy(discInfo->table + ((blockNum + 1) * 8) + 4, &crc_32, 4);
+            // get the crc of the block and copy it to the table
+            uint32_t crc = crc32(buffer, read, 0);
+            memcpy(discInfo->table + ((blockNum + 1) * 8) + 4, &crc, 4);
+
+            // only advance the block number if this was not a repeat block
+            if (prevCrc != crc) {
+                dataBlockNum++;
+            }
+            prevCrc = crc;
         }
         blockNum++;
     }
