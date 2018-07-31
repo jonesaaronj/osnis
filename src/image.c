@@ -43,7 +43,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
 
     uint32_t lastAddr = 0;
     size_t read;
-    for(int blockNum = 2; blockNum < discBlockNum; blockNum++) {
+    for(int blockNum = 2; blockNum <= discBlockNum; blockNum++) {
         
         // set the block size to write
         size_t writeSize = (blockNum < discBlockNum) ? BLOCK_SIZE : lastBlockSize;
@@ -126,7 +126,7 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
     while((read = fread(buffer, 1, BLOCK_SIZE, inputF)) > 0) {
 
         // set the block size to write
-        size_t writeSize = (blockNum == discBlockNum - 1) ? lastBlockSize : BLOCK_SIZE;
+        size_t writeSize = (blockNum < discBlockNum) ? BLOCK_SIZE : lastBlockSize;
 
         // get the junk block
         unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
