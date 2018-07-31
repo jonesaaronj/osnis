@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
         // Creating a shrunken image will take two passes.
         // One to prifile the disc and one to do the write the shrunken image
         struct DiscInfo * discInfo = profileImage(inputFile);
+        printDiscInfo(discInfo);
         shrinkImage(discInfo, inputFile, outputFile);
     } else if(doUnshrink){
         unshrinkImage(inputFile, outputFile);
