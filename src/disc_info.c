@@ -164,12 +164,12 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     printf("Disc Name: %s\n", discInfo->discName);
     printf("Disc Number: %d\n", discInfo->discNumber);
 
-    uint32_t thisCrc = 0;
     uint32_t prevCrc = 0;
 
     int dataCount = 0;
-    int junkCount = 0;
-    int repeatCount = 0;
+    int generatedJunkCount = 0;
+    int repeatJunkCount = 0;
+    int repeatBlock = 0;
     
     int blockNum;
     for(blockNum = 1; blockNum < BLOCK_SIZE; blockNum++) {
@@ -185,59 +185,57 @@ void printDiscInfo(struct DiscInfo * discInfo) {
                 printf("%05d blocks of data\n", dataCount);
                 dataCount = 0;
             }
-            if (repeatCount > 0){
-                printf("%05d blocks of repeat\n", repeatCount);
-                repeatCount = 0;
+            if (repeatJunkCount > 0){
+                printf("%05d blocks of repeat\n", repeatJunkCount);
+                repeatJunkCount = 0;
             }
-            junkCount++;
+            generatedJunkCount++;
         }
 
         // if 4 FFs we are a repeat block
         else if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
-            if (junkCount > 0) {
-                printf("%05d blocks of junk\n", junkCount);
-                junkCount = 0;
+            if (generatedJunkCount > 0) {
+                printf("%05d blocks of junk\n", generatedJunkCount);
+                generatedJunkCount = 0;
             }
             if (dataCount > 0){
                 printf("%05d blocks of data\n", dataCount);
                 dataCount = 0;
             }
-            repeatCount++;
+            repeatJunkCount++;
         }
 
         // we are a data block
         else {
-
-            prevCrc = thisCrc;
-            thisCrc = 0;
-            memcpy(&thisCrc, discInfo->table + (blockNum * 8) + 4, 4);
-
-            if (prevCrc == thisCrc) {
-                printf("SAW A REPEAT BLOCK");
+            if (generatedJunkCount > 0) {
+                printf("%05d blocks of generated junk\n", generatedJunkCount);
+                generatedJunkCount = 0;
+            }
+            if (repeatJunkCount > 0){
+                printf("%05d blocks of repeat junk\n", repeatJunkCount);
+                repeatJunkCount = 0;
             }
 
-            if (junkCount > 0) {
-                printf("%05d blocks of junk\n", junkCount);
-                junkCount = 0;
+            // see if we are a repeated data block
+            if (memcmp(&prevCrc, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
+                repeatBlock++;
             }
-            if (repeatCount > 0){
-                printf("%05d blocks of repeat\n", repeatCount);
-                repeatCount = 0;
-            }
+            memcpy(&prevCrc, discInfo->table + (blockNum * 8) + 4, 4);
+
             dataCount++;
         }
     }
     if (dataCount > 0){
         printf("%05d blocks of data\n", dataCount);
-        dataCount = 0;
     }
-    if (junkCount > 0) {
-        printf("%05d blocks of junk\n", junkCount);
-        junkCount = 0;
+    if (generatedJunkCount > 0) {
+        printf("%05d blocks of generated junk\n", generatedJunkCount);
     }
-    if (repeatCount > 0) {
-        printf("%05d blocks of repeat\n", repeatCount);
-        repeatCount = 0;
+    if (repeatJunkCount > 0) {
+        printf("%05d blocks of repeat junk\n", repeatJunkCount);
+    }
+    if (repeatBlock > 0) {
+        printf("%05d BLOCKS REPEATED\n", repeatBlock);
     }
 
     printf("%05d TOTAL BLOCKS\n", blockNum - 1);
