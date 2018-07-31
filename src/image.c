@@ -46,7 +46,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     for(int blockNum = 2; blockNum <= discBlockNum; blockNum++) {
         
         // set the block size to write
-        size_t writeSize = (blockNum < discBlockNum) ? BLOCK_SIZE : lastBlockSize;
+        size_t writeSize = (blockNum + 1 < discBlockNum) ? BLOCK_SIZE : lastBlockSize;
 
         // if 8 00s we are at the end of the disc
         if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 8) == 0) {
@@ -126,7 +126,7 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
     while((read = fread(buffer, 1, BLOCK_SIZE, inputF)) > 0) {
 
         // set the block size to write
-        size_t writeSize = (blockNum < discBlockNum) ? BLOCK_SIZE : lastBlockSize;
+        size_t writeSize = (blockNum + 1 < discBlockNum) ? BLOCK_SIZE : lastBlockSize;
 
         // get the junk block
         unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
