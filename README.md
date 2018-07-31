@@ -1,5 +1,7 @@
 https://github.com/LedZeppelin68/gcm-nasos-deux/
 
+Open Source Nintendo Image Shrinker
+
 Gamecube/Wii discs seem to work on a block size of 0x40000(262,144) bytes
 Here is some useful information about various images
 

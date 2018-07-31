@@ -175,7 +175,7 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     for(blockNum = 1; blockNum < BLOCK_SIZE; blockNum++) {
         
         // if 8 00s we are at the end of the disc
-        if (memcmp(&ZERO, discInfo->table + (blockNum * 8), 8) == 0) {
+        if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 8) == 0) {
             break;
         }
 

@@ -44,16 +44,16 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     for(int blockNum = 2; blockNum < discBlockNum; blockNum++) {
         
         // set the block size to write
-        size_t writeSize = (blockNum == discBlockNum) ? lastBlockSize : BLOCK_SIZE;
+        size_t writeSize = (blockNum < discBlockNum) ? BLOCK_SIZE : lastBlockSize;
 
         // if 8 00s we are at the end of the disc
-        if (memcmp(&ZERO, discInfo->table + (blockNum * 8), 8) == 0) {
+        if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 8) == 0) {
             break;
         }
 
         // if 8 FFs we are a junk block
         else if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + (blockNum * 8), 8) == 0) {
-            // get the junk block
+            // get the junk block and write it
             unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
             if (fwrite(junk, writeSize, 1, outputF) != 1) {
                 fprintf(stderr, "ERROR: could not write block\n");
@@ -64,7 +64,6 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         // otherwise we are a data block
         else {
             size_t read;
-            // read the data block
             if ((read = fread(buffer, 1, BLOCK_SIZE, inputF)) != BLOCK_SIZE){
                 fprintf(stderr, "ERROR: could not read block\n");
                 return;
@@ -78,7 +77,6 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                 }
             }
         }
-
     }
     fclose(inputF);
     fclose(outputF);

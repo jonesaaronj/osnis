@@ -7,7 +7,7 @@
 static const unsigned char JUNK_BLOCK_MAGIC_WORD[8] = {0xFF,0xFF,0xFF,0xFF,'J','U','N','K'};
 static const unsigned char JUNK[4] = {'J','U','N','K'};
 static const uint64_t FFs  = 0xFFFFFFFFFFFFFFFF;
-static const uint64_t ZERO = 0x0;
+static const uint64_t ZEROs = 0x0;
 
 static const unsigned char GC_DISC = 1;
 static const unsigned char WII_DISC = 2;
@@ -21,7 +21,7 @@ static const size_t GC_BLOCK_NUM = 5570;
 static const size_t WII_BLOCK_NUM = 17929;
 static const size_t WII_DL_BLOCK_NUM = 32468;
 
-static const unsigned char SHRUNKEN_MAGIC_WORD[8] = {'S','H','R','U','N','K','E','N'};
+static const unsigned char SHRUNKEN_MAGIC_WORD[8] = {'O','S','N','I','S',0x00,'V','1'};
 
 static const unsigned char GC_MAGIC_WORD[] = {0xC2, 0x33, 0x9F, 0x3D};
 static const unsigned char WII_MAGIC_WORD[] = {0x5D, 0x1C, 0x9E, 0xA3};
