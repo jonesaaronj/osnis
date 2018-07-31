@@ -46,15 +46,11 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     fprintf(stderr, "Last Block Size %zx\n", lastBlockSize);
 
     uint32_t lastAddr = 0;
-    size_t read;
+    size_t read = 0;
     for(int blockNum = 2; blockNum <= discBlockNum; blockNum++) {
         
         // set the block size to write
-        size_t writeSize = (blockNum < discBlockNum - 1) ? BLOCK_SIZE : lastBlockSize;
-        if (read != writeSize) {
-            fprintf(stderr, "ERROR: %d of %zd\n", blockNum, discBlockNum);
-            fprintf(stderr, "ERROR: read %zx != write %zx\n", read, writeSize);
-        }
+        size_t writeSize = (blockNum < discBlockNum) ? BLOCK_SIZE : lastBlockSize;
 
         // if 8 00s we are at the end of the disc
         if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 8) == 0) {
@@ -78,6 +74,10 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                 if ((read = fread(buffer, 1, BLOCK_SIZE, inputF)) != BLOCK_SIZE){
                     fprintf(stderr, "ERROR: could not read block\n");
                     return;
+                }
+                if (read != writeSize) {
+                    fprintf(stderr, "ERROR: %d of %zd\n", blockNum, discBlockNum);
+                    fprintf(stderr, "ERROR: read %zx != write %zx\n", read, writeSize);
                 }
             }
             memcpy(&lastAddr, discInfo->table + ((blockNum + 1) * 8) + 4, 4);
