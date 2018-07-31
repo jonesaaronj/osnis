@@ -133,7 +133,7 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
     while((read = fread(buffer, 1, BLOCK_SIZE, inputF)) > 0) {
 
         // set the block size to write
-        size_t writeSize = (blockNum <= discBlockNum + 1) ? BLOCK_SIZE : lastBlockSize;
+        size_t writeSize = (blockNum < discBlockNum) ? BLOCK_SIZE : lastBlockSize;
         if (read != writeSize) {
             fprintf(stderr, "ERROR: %zd of %zd\n", blockNum, discBlockNum);
             fprintf(stderr, "ERROR: read %zx != write %zx\n", read, writeSize);
