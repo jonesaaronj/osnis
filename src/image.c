@@ -47,7 +47,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
 
     uint32_t lastAddr = 0;
     size_t read;
-    for(int blockNum = 2; blockNum <= discBlockNum + 1; blockNum++) {
+    for(int blockNum = 2; blockNum < discBlockNum; blockNum++) {
         
         // set the block size to write
         size_t writeSize = (blockNum <= discBlockNum) ? BLOCK_SIZE : lastBlockSize;

@@ -4,13 +4,13 @@ Gamecube/Wii discs seem to work on a block size of 0x40000(262,144) bytes
 Here is some useful information about various images
 
 GC ISO 0x57058000(1,459,978,240) bytes
-5569 0x40000 byte blocks, 1 98304 byte block, 5,570 blocks total
+5569 0x40000(262,144) byte blocks, 1 0x18000(98,304) byte block, 5,570 blocks total
 
 Wii Single Layer ISO 0x118240000(4,699,979,776) bytes
-17,929 0x40000 byte blocks
+17,929 0x40000(262,144) byte blocks
 
 Wii Dual Layer ISO 0x1FB4E0000(8,511,160,320) bytes
-32,467 0x40000 byte blocks, 1 131072 byte block, 32468 blocks total
+32,467 0x40000(262,144) byte blocks, 1 0x20000(131072) byte block, 32468 blocks total
 
 If we use a single block of size 0x40000 bytes as a table to describe our shrunken image and if the largest image has 32,468 blocks then each block can have 8 bytes available to describe it within our table.
 
