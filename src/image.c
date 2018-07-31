@@ -47,10 +47,10 @@ void unshrinkImage(char *inputFile, char *outputFile) {
 
     uint32_t lastAddr = 0;
     size_t read;
-    for(int blockNum = 2; blockNum <= discBlockNum; blockNum++) {
+    for(int blockNum = 2; blockNum <= discBlockNum + 1; blockNum++) {
         
         // set the block size to write
-        size_t writeSize = (blockNum < discBlockNum) ? BLOCK_SIZE : lastBlockSize;
+        size_t writeSize = (blockNum <= discBlockNum) ? BLOCK_SIZE : lastBlockSize;
 
         // if 8 00s we are at the end of the disc
         if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 8) == 0) {
