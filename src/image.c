@@ -58,7 +58,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         }
 
         // if 8 FFs we are a junk block
-        else if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + ((blockNum + 1) * 8), 8) == 0) {
+        else if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + (blockNum * 8), 8) == 0) {
             // get the junk block and write it
             unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
             if (fwrite(junk, writeSize, 1, outputF) != 1) {
@@ -70,7 +70,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         // otherwise we are a data block
         else {
             // only read a new block in if we are not a repeat bock
-            if (memcmp(&lastAddr, discInfo->table + ((blockNum + 1) * 8), 4) != 0) {
+            if (memcmp(&lastAddr, discInfo->table + (blockNum * 8), 4) != 0) {
                 if ((read = fread(buffer, 1, BLOCK_SIZE, inputF)) != BLOCK_SIZE){
                     fprintf(stderr, "ERROR: could not read block\n");
                     return;
@@ -80,11 +80,11 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                     fprintf(stderr, "ERROR: read %zx != write %zx\n", read, writeSize);
                 }
             }
-            memcpy(&lastAddr, discInfo->table + ((blockNum + 1) * 8) + 4, 4);
+            memcpy(&lastAddr, discInfo->table + (blockNum * 8) + 4, 4);
             
             // check the crc32 of the data block and write if everthing is fine
             uint32_t crc = crc32(buffer, read, 0);
-            if (memcmp(&crc, discInfo->table + ((blockNum + 1) * 8) + 4, 4) == 0) {
+            if (memcmp(&crc, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
                 if (fwrite(buffer, writeSize, 1, outputF) != 1) {
                     fprintf(stderr, "ERROR: could not write block\n");
                     break;
