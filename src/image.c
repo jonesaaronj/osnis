@@ -41,6 +41,8 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     size_t lastBlockSize = discInfo->isGC ? GC_LAST_BLOCK_SIZE :
         discInfo->isWII && discInfo->isDualLayer ? WII_DL_LAST_BLOCK_SIZE : WII_LAST_BLOCK_SIZE;
 
+    uint32_t lastAddr = 0;
+    size_t read;
     for(int blockNum = 2; blockNum < discBlockNum; blockNum++) {
         
         // set the block size to write
@@ -63,14 +65,18 @@ void unshrinkImage(char *inputFile, char *outputFile) {
 
         // otherwise we are a data block
         else {
-            size_t read;
-            if ((read = fread(buffer, 1, BLOCK_SIZE, inputF)) != BLOCK_SIZE){
-                fprintf(stderr, "ERROR: could not read block\n");
-                return;
+            // only read a new block in if we are not a repeat bock
+            if (memcmp(&lastAddr, discInfo->table + (blockNum * 8), 4) != 0) {
+                if ((read = fread(buffer, 1, BLOCK_SIZE, inputF)) != BLOCK_SIZE){
+                    fprintf(stderr, "ERROR: could not read block\n");
+                    return;
+                }
             }
+            memcpy(&lastAddr, discInfo->table + (blockNum * 8) + 4, 4);
+            
             // check the crc32 of the data block and write if everthing is fine
-            uint32_t crc_32 = crc32(buffer, read, 0);
-            if (memcmp(&crc_32, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
+            uint32_t crc = crc32(buffer, read, 0);
+            if (memcmp(&crc, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
                 if (fwrite(buffer, writeSize, 1, outputF) != 1) {
                     fprintf(stderr, "ERROR: could not write block\n");
                     break;
@@ -167,12 +173,12 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
                 fprintf(stderr, "Block crc was %x but table crc was %x\n", crc, tableCrc);
                 break;
             }
-            if (fwrite(buffer, writeSize, 1, outputF) != 1) {
-                fprintf(stderr, "ERROR: could not write block\n");
-                break;
-            }
-            // only advance the block number if this was not a repeat block
+            // only write the block if this was not a repeat block
             if (prevCrc != crc) {
+                if (fwrite(buffer, writeSize, 1, outputF) != 1) {
+                    fprintf(stderr, "ERROR: could not write block\n");
+                    break;
+                }
                 dataBlockNum++;
             }
             prevCrc = crc;
