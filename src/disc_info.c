@@ -165,6 +165,7 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     }
 
     if (discInfo->isShrunken) printf("Shrunken ");
+    if (discInfo->isDualLayer) printf("Dual Layer ");
     if (discInfo->isGC) printf("Gamecube Image Found!!!\n");
     if (discInfo->isWII) printf("WII Image Found!!!\n");
     printf("Disc Id: %.*s\n", 6, discInfo->discId);
