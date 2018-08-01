@@ -147,7 +147,7 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
         discInfo->isWII = memcmp(WII_MAGIC_WORD, data + 24, 4) == 0;
 
         if (!discInfo->isGC && !discInfo->isWII) {
-            fprintf(stderr, "ERROR: We are not a GC or WII disc\n");
+            fprintf(stderr, "ERROR: This is not a GC or WII image\n");
             return;
         }
 
@@ -168,17 +168,17 @@ void printDiscInfo(struct DiscInfo * discInfo) {
 
     // by the time we get here we should know if this is a wii or gc image
     if (!discInfo->isGC && !discInfo->isWII) {
-        fprintf(stderr, "ERROR: We are not a GC or WII disc\n");
+        fprintf(stderr, "ERROR: This is not a GC or WII image\n");
         return;
     }
 
-    if (discInfo->isShrunken) printf("Shrunken ");
-    if (discInfo->isDualLayer) printf("Dual Layer ");
-    if (discInfo->isGC) printf("Gamecube Image Found!!!\n");
-    if (discInfo->isWII) printf("WII Image Found!!!\n");
-    printf("Disc Id: %.*s\n", 6, discInfo->discId);
-    printf("Disc Name: %s\n", discInfo->discName);
-    printf("Disc Number: %d\n", discInfo->discNumber);
+    if (discInfo->isShrunken) fprintf(stderr, "Shrunken ");
+    if (discInfo->isDualLayer) fprintf(stderr, "Dual Layer ");
+    if (discInfo->isGC) fprintf(stderr, "Gamecube Image Found!!!\n");
+    if (discInfo->isWII) fprintf(stderr, "WII Image Found!!!\n");
+    fprintf(stderr, "Disc Id: %.*s\n", 6, discInfo->discId);
+    fprintf(stderr, "Disc Name: %s\n", discInfo->discName);
+    fprintf(stderr, "Disc Number: %d\n", discInfo->discNumber);
 
     uint32_t prevCrc = 0;
 
@@ -198,11 +198,11 @@ void printDiscInfo(struct DiscInfo * discInfo) {
         // if you see FF address this is a junk block
         else if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
             if (dataCount > 0){
-                printf("%05d blocks of data\n", dataCount);
+                fprintf(stderr, "%05d blocks of data\n", dataCount);
                 dataCount = 0;
             }
             if (repeatJunkCount > 0){
-                printf("%05d blocks of repeat\n", repeatJunkCount);
+                fprintf(stderr, "%05d blocks of repeat\n", repeatJunkCount);
                 repeatJunkCount = 0;
             }
             generatedJunkCount++;
@@ -211,11 +211,11 @@ void printDiscInfo(struct DiscInfo * discInfo) {
         // if you see 00 address this is a repeat block
         else if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 4) == 0) {
             if (generatedJunkCount > 0) {
-                printf("%05d blocks of junk\n", generatedJunkCount);
+                fprintf(stderr, "%05d blocks of junk\n", generatedJunkCount);
                 generatedJunkCount = 0;
             }
             if (dataCount > 0){
-                printf("%05d blocks of data\n", dataCount);
+                fprintf(stderr, "%05d blocks of data\n", dataCount);
                 dataCount = 0;
             }
             repeatJunkCount++;
@@ -224,11 +224,11 @@ void printDiscInfo(struct DiscInfo * discInfo) {
         // we are a data block
         else {
             if (generatedJunkCount > 0) {
-                printf("%05d blocks of generated junk\n", generatedJunkCount);
+                fprintf(stderr, "%05d blocks of generated junk\n", generatedJunkCount);
                 generatedJunkCount = 0;
             }
             if (repeatJunkCount > 0){
-                printf("%05d blocks of repeat junk\n", repeatJunkCount);
+                fprintf(stderr, "%05d blocks of repeat junk\n", repeatJunkCount);
                 repeatJunkCount = 0;
             }
 
@@ -242,17 +242,17 @@ void printDiscInfo(struct DiscInfo * discInfo) {
         }
     }
     if (dataCount > 0){
-        printf("%05d blocks of data\n", dataCount);
+        fprintf(stderr, "%05d blocks of data\n", dataCount);
     }
     if (generatedJunkCount > 0) {
-        printf("%05d blocks of generated junk\n", generatedJunkCount);
+        fprintf(stderr, "%05d blocks of generated junk\n", generatedJunkCount);
     }
     if (repeatJunkCount > 0) {
-        printf("%05d blocks of repeat junk\n", repeatJunkCount);
+        fprintf(stderr, "%05d blocks of repeat junk\n", repeatJunkCount);
     }
     if (repeatBlock > 0) {
-        printf("%05d BLOCKS REPEATED\n", repeatBlock);
+        fprintf(stderr, "%05d BLOCKS REPEATED\n", repeatBlock);
     }
 
-    printf("%05d TOTAL BLOCKS\n", blockNum - 1);
+    fprintf(stderr, "%05d TOTAL BLOCKS\n", blockNum - 1);
 }

@@ -7,7 +7,7 @@
 void printChar(unsigned char *a, int length)
 {
     for (int i = 0; i < length; i++) {
-        printf("%x", a[i]);
+        fprintf(stderr, "%x", a[i]);
     }
 }
 

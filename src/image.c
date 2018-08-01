@@ -41,14 +41,6 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     getDiscInfo(discInfo, buffer);
     printDiscInfo(discInfo);
 
-    printf("Table: \n");
-    printChar(discInfo->table, 8);
-    printf("\n");
-    printChar(discInfo->table + 8, 8);
-    printf("\n");
-    printChar(discInfo->table + 16, 8);
-    printf("\nTable: \n");
-
     size_t discBlockNum = 0;
     size_t lastBlockSize = 0;
     if (discInfo->isWII && discInfo->isDualLayer) {
@@ -62,8 +54,8 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         lastBlockSize = GC_LAST_BLOCK_SIZE;
     }
 
-    printf("discBlockNum: %zu\n", discBlockNum);
-    printf("lastBlockSize: %zx\n", lastBlockSize);
+    fprintf(stderr, "discBlockNum: %zu\n", discBlockNum);
+    fprintf(stderr, "lastBlockSize: %zx\n", lastBlockSize);
 
     uint32_t lastAddr = 0;
     size_t read = 0;
@@ -89,12 +81,6 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                 fprintf(stderr, "UNSHRINK ERROR: junk crc error at %d\n", blockNum);
                 fprintf(stderr, "UNSHRINK ERROR: Block crc was %x but table crc was %x\n", crc, tableCrc);
                 break;
-            }
-
-            if (blockNum == 5408) {
-                printf("Junk3 at %d is ", blockNum);
-                printChar(junk, 20);
-                printf("\n");
             }
         }
 
@@ -122,7 +108,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                     break;
                 }
             }
-            memcpy(&lastAddr, discInfo->table + (blockNum * 8) + 4, 4);
+            memcpy(&lastAddr, discInfo->table + (blockNum * 8), 4);
             
             // check the crc32 of the data block and write if everthing is fine
             uint32_t crc = crc32(buffer, writeSize, 0);
@@ -182,8 +168,8 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         lastBlockSize = GC_LAST_BLOCK_SIZE;
     }
 
-    printf("discBlockNum: %zu\n", discBlockNum);
-    printf("lastBlockSize: %zx\n", lastBlockSize);
+    fprintf(stderr, "discBlockNum: %zu\n", discBlockNum);
+    fprintf(stderr, "lastBlockSize: %zx\n", lastBlockSize);
 
     uint32_t prevCrc = 0;
     uint32_t dataBlockNum = 0;
