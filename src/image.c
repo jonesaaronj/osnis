@@ -120,7 +120,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                 }
             } else {
                 uint32_t tableCrc;
-                memcpy(&tableCrc, discInfo->table + ((blockNum + 1) * 8) + 4, 4);
+                memcpy(&tableCrc, discInfo->table + (blockNum * 8) + 4, 4);
                 fprintf(stderr, "UNSHRINK ERROR: data crc error at %d\n", blockNum);
                 fprintf(stderr, "UNSHRINK ERROR: Block crc was %x but table crc was %x\n", crc, tableCrc);
             }
