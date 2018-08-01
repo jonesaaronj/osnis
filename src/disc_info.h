@@ -6,7 +6,8 @@
 
 //static const unsigned char JUNK_BLOCK_MAGIC_WORD[8] = {0xFF,0xFF,0xFF,0xFF,'J','U','N','K'};
 //static const unsigned char JUNK[4] = {'J','U','N','K'};
-static const uint64_t FFs  = 0xFFFFFFFFFFFFFFFF;
+static const uint64_t FFs = 0xFFFFFFFFFFFFFFFF;
+static const uint64_t FEs = 0xFEFEFEFEFEFEFEFE;
 static const uint64_t ZEROs = 0x0;
 
 static const unsigned char GC_DISC = 1;

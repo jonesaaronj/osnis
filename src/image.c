@@ -61,7 +61,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
             // get the junk block and write it
             unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
-            // check the crc32 of the data block and write if everthing is fine
+            // check the crc32 of the junk block and write if everthing is fine
             uint32_t crc = crc32(junk, BLOCK_SIZE, 0);
             if (memcmp(&crc, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
                 if (fwrite(junk, writeSize, 1, outputF) != 1) {
@@ -74,6 +74,16 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                 printf("Junk3 at %d is ", blockNum);
                 printChar(junk, 20);
                 printf("\n");
+            }
+        }
+
+        // if FEs we are a repeat junk block
+        if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
+            unsigned char repeatByte = discInfo->table[((blockNum + 1) * 8) + 7];
+            unsigned char repeat[BLOCK_SIZE] = {repeatByte};
+            if (fwrite(repeat, writeSize, 1, outputF) != 1) {
+                fprintf(stderr, "ERROR: could not write block\n");
+                break;
             }
         }
 
@@ -180,9 +190,9 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
             }
         }
 
-        // if this is a repeated block skip writing it
+        // if this is a repeated block just check that the partition table is correct and don't write it
         else if((repeatByte = isUniform(buffer, read)) != NULL) {
-            if (memcmp(&ZEROs, discInfo->table + ((blockNum + 1) * 8), 4) != 0) {
+            if (memcmp(&FEs, discInfo->table + ((blockNum + 1) * 8), 4) != 0) {
                 fprintf(stderr, "ERROR: Saw a repeat block at %zu but expected something else\n", blockNum);
                 break;
             }

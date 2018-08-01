@@ -56,7 +56,7 @@ struct DiscInfo * profileImage(char *file)
         // check if this is a block of repeated junk byte
         else if((repeatByte = isUniform(buffer, read)) != NULL) {
             // write our repeated byte to the partition table
-            memcpy(discInfo->table + ((blockNum + 1) * 8), &ZEROs, 7);
+            memcpy(discInfo->table + ((blockNum + 1) * 8), &FEs, 4);
             memcpy(discInfo->table + ((blockNum + 1)* 8) + 7, repeatByte, 1);
         }
 

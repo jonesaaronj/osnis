@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-static const size_t BLOCK_SIZE = 0x40000;
+#define BLOCK_SIZE 0x40000
 
 void printChar(unsigned char *a, int length);
 
