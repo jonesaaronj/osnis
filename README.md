@@ -1,8 +1,8 @@
 # Open Source Nintendo Image Shrinker
 
-Gamecube/Wii discs seem to work on a block size of 0x40000(262,144) bytes
+Gamecube/Wii discs seem to be mastered on a block size of 0x40000(262,144) bytes
 
-## Here is some useful information about various nintendo iso images
+## Here is some useful information about various Nintendo iso images
 
 * GC ISO
   * 0x57058000(1,459,978,240) bytes
