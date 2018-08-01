@@ -42,7 +42,8 @@ If we use a single block of size 0x40000 bytes as a table to describe our shrunk
   * 04-07 CRC32 of the junk block
   * The algorithm creates a unique deterministic block of junk given the discId, block number, and disc number.  Since it is completely reproducable and atomic this information can be recreated without knowing any other data from the image.
 * Repeat junk block - a block of a single uniform repeated byte
-  * 00-07 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x?? - the repeated char
+  * 00-03 0xFE,0xFE,0xFE,0xFE
+  * 00-07 0x00,0x00,0x00,0x?? - the repeated char
 * No Data
   * 00-07 0x00
   * Once we see an entry of all 0's we are at the end of our image and can ignore all future blocks, which should also be zero.
