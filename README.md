@@ -46,5 +46,6 @@ If we use a single block of size 0x40000 bytes as a table to describe our shrunk
 This should provide a robust definition of an image that can be used to restore an exact duplicate of the original image as long as the junk generating algorithm is known.  Also, this should be an efficient image for being able to randomly access any given byte of a shrunken image as if it was the original image just by doing a lookup in the table and then either seeking to the location within the shrunken image, or by generating the junk data as necessary.
 
 ### TODO
-1. Figure out why WII images don't shrink as much as they should
-2. Update Nintendont and Dolphin to be able to read these images natively
+1. Make it work on wierd one off images that I don't know about yet
+2. Figure out why WII images don't shrink as much as they should
+3. Update Nintendont and Dolphin to be able to read these images natively
