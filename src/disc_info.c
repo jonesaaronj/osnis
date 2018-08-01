@@ -40,6 +40,7 @@ struct DiscInfo * profileImage(char *file)
         }
 
         // get the junk block for this block number
+        // for the purposes of getting junk the blockNum starts at 0
         unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
 
         // check if this is a junk block

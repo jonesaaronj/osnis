@@ -11,6 +11,7 @@
  * Unshrink a shrunken image
  */
 void unshrinkImage(char *inputFile, char *outputFile) {
+
     // if file pointer is empty read from stdin
     FILE *inputF = (inputFile != NULL) ? fopen(inputFile, "rb") : stdin;
     // if file pointer is empty write to stdout
@@ -21,12 +22,14 @@ void unshrinkImage(char *inputFile, char *outputFile) {
 
     struct DiscInfo *discInfo = calloc(sizeof(struct DiscInfo), 1);
 
-    // get the partition table from the first block
+    // in a shrunken image the first block is always the partition table
     if (fread(buffer, 1, BLOCK_SIZE, inputF) != BLOCK_SIZE){
         fprintf(stderr, "ERROR: could not read partition table\n");
         return;
     }
     getDiscInfo(discInfo, buffer);
+
+    // the first block of data always exists
     if (fread(buffer, 1, BLOCK_SIZE, inputF) != BLOCK_SIZE){
         fprintf(stderr, "ERROR: could not read partition table\n");
         return;
@@ -38,16 +41,19 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     getDiscInfo(discInfo, buffer);
     printDiscInfo(discInfo);
 
+    size_t lastBlockSize = discInfo->lastBlockSize;
+    size_t discBlockNum = discInfo->discBlockNum;
+
     uint32_t lastAddr = 0;
     size_t read = 0;
-    for(int blockNum = 2; blockNum <= discInfo->discBlockNum; blockNum++) {
+    for(int blockNum = 2; blockNum <= discBlockNum; blockNum++) {
         
         // set the block size to write
-        size_t writeSize = (blockNum < discInfo->discBlockNum) ?
-            BLOCK_SIZE : discInfo->lastBlockSize;
+        size_t writeSize = (blockNum < discBlockNum) ?
+            BLOCK_SIZE : lastBlockSize;
 
         // if 8 00s we are at the end of the disc
-        //if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 8) == 0) {
+        // if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 8) == 0) {
         //    break;
         //}
 
@@ -80,7 +86,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                     return;
                 }
                 if (read != writeSize) {
-                    fprintf(stderr, "ERROR: %d of %zd\n", blockNum, discInfo->discBlockNum);
+                    fprintf(stderr, "ERROR: %d of %zd\n", blockNum, discBlockNum);
                     fprintf(stderr, "ERROR: read %zx != write %zx\n", read, writeSize);
                 }
             }
