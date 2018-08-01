@@ -186,7 +186,7 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
     printf("lastBlockSize: %zx\n", lastBlockSize);
 
     uint32_t prevCrc = 0;
-    uint32_t dataBlockNum = 1;
+    uint32_t dataBlockNum = 0;
     size_t blockNum = 0;
     size_t read;
     while((read = fread(buffer, 1, BLOCK_SIZE, inputF)) > 0) {
@@ -201,11 +201,6 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
 
         // get the junk block
         unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
-        if (blockNum == 5408) {
-            printf("Junk2 at %ld is ", blockNum);
-            printChar(junk, 20);
-            printf("\n");
-        }
 
         // get the crc32 of the data block
         uint32_t crc = crc32(buffer, read, 0);
@@ -240,10 +235,13 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         // if we got this far we should be a data block
         // make sure our table has the correct address and crc
         else {
+            if (prevCrc != crc) {
+                dataBlockNum++;
+            }
             if (memcmp(&dataBlockNum, discInfo->table + ((blockNum + 1) * 8), 4) != 0) {
                 uint32_t address;
                 memcpy(&address, discInfo->table + ((blockNum + 1) * 8), 4);
-                fprintf(stderr, "SHRINK ERROR: Saw a data block but address was wrong at %zu ", blockNum);
+                fprintf(stderr, "SHRINK ERROR: Saw a data block but address was wrong at %zu\n", blockNum);
                 fprintf(stderr, "SHRINK ERROR: expected %u but %u is in the table\n", dataBlockNum, address);
                 break;
             }
@@ -260,7 +258,6 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
                     fprintf(stderr, "SHRINK ERROR: could not write data block %zu at %d\n", blockNum, dataBlockNum);
                     break;
                 }
-                dataBlockNum++;
             }
             prevCrc = crc;
         }

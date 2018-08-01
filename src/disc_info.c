@@ -255,10 +255,4 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     }
 
     printf("%05d TOTAL BLOCKS\n", blockNum - 1);
-
-    int n = 5408;
-    unsigned char * junk = getJunkBlock(n, discInfo->discId, discInfo->discNumber);
-    printf("Junk1 at %d is ", n);
-    printChar(junk, 20);
-    printf("\n");
 }
