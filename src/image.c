@@ -41,8 +41,12 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     getDiscInfo(discInfo, buffer);
     printDiscInfo(discInfo);
 
-    printChar(discInfo->table, 80);
-    
+    printf("Table: \n");
+    printChar(discInfo->table, 8);
+    printChar(discInfo->table + 8, 8);
+    printChar(discInfo->table + 16, 8);
+    printf("Table: \n");
+
     size_t discBlockNum = discInfo->isGC ? GC_BLOCK_NUM :
         discInfo->isWII && discInfo->isDualLayer ? WII_DL_BLOCK_NUM : WII_BLOCK_NUM;
     size_t lastBlockSize = discInfo->isGC ? GC_LAST_BLOCK_SIZE :
@@ -79,6 +83,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                 memcpy(&tableCrc, discInfo->table + ((blockNum) * 8) + 4, 4);
                 fprintf(stderr, "UNSHRINK ERROR: junk crc error at %d\n", blockNum);
                 fprintf(stderr, "UNSHRINK ERROR: Block crc was %x but table crc was %x\n", crc, tableCrc);
+                break;
             }
 
             if (blockNum == 5408) {
@@ -109,6 +114,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                 if (read != writeSize) {
                     fprintf(stderr, "UNSHRINK ERROR: %d of %zd\n", blockNum, discBlockNum);
                     fprintf(stderr, "UNSHRINK ERROR: read %zx != write %zx\n", read, writeSize);
+                    break;
                 }
             }
             memcpy(&lastAddr, discInfo->table + (blockNum * 8) + 4, 4);
@@ -125,6 +131,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                 memcpy(&tableCrc, discInfo->table + (blockNum * 8) + 4, 4);
                 fprintf(stderr, "UNSHRINK ERROR: data crc error at %d\n", blockNum);
                 fprintf(stderr, "UNSHRINK ERROR: Block crc was %x but table crc was %x\n", crc, tableCrc);
+                break;
             }
         }
     }
