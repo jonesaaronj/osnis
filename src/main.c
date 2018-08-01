@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     bool doUnshrink = false;
 
     int opt;
-    while ((opt = getopt(argc, argv, "i:o:psu")) != -1) {
+    while ((opt = getopt(argc, argv, "i:o:hpsu")) != -1) {
         switch (opt) {
             case 'p':
                 doProfile = true;
@@ -37,7 +37,8 @@ int main(int argc, char *argv[])
             case '?':
                 if (optopt == 'i' || optopt == 'i') {
                     fprintf (stderr, "Option -%c requires an argument.\n", optopt);
-                }            
+                }
+            case 'h':
             default:
                 fprintf(stderr, "Usage: %s -s|-u [-i inputFile] [-o outputFile]\n", argv[0]);
                 return 1;
