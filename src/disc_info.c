@@ -79,6 +79,7 @@ struct DiscInfo * profileImage(char *file)
     }
     fclose(f);
 
+    printf("bLAH: %zu %zu", blockNum, WII_DL_BLOCK_NUM);
     if (blockNum + 1 == WII_DL_BLOCK_NUM) {
         discInfo->isDualLayer = true;
     }
