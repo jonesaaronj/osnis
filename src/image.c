@@ -49,10 +49,18 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     printChar(discInfo->table + 16, 8);
     printf("\nTable: \n");
 
-    size_t discBlockNum = discInfo->isGC ? GC_BLOCK_NUM :
-        discInfo->isWII && discInfo->isDualLayer ? WII_DL_BLOCK_NUM : WII_BLOCK_NUM;
-    size_t lastBlockSize = discInfo->isGC ? GC_LAST_BLOCK_SIZE :
-        discInfo->isWII && discInfo->isDualLayer ? WII_DL_LAST_BLOCK_SIZE : WII_LAST_BLOCK_SIZE;
+    size_t discBlockNum = 0;
+    size_t lastBlockSize = 0;
+    if (discInfo->isWII && discInfo->isDualLayer) {
+        discBlockNum = WII_DL_BLOCK_NUM;
+        lastBlockSize = WII_DL_LAST_BLOCK_SIZE;
+    } else if(discInfo->isWII) {
+        discBlockNum = WII_BLOCK_NUM;
+        lastBlockSize = WII_LAST_BLOCK_SIZE;
+    } else if(discInfo->isGC) {
+        discBlockNum = GC_BLOCK_NUM;
+        lastBlockSize = GC_LAST_BLOCK_SIZE;
+    }
 
     printf("discBlockNum: %zu\n", discBlockNum);
     printf("lastBlockSize: %zx\n", lastBlockSize);
@@ -166,10 +174,18 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         return;
     }
 
-    size_t discBlockNum = discInfo->isGC ? GC_BLOCK_NUM :
-        discInfo->isWII && discInfo->isDualLayer ? WII_DL_BLOCK_NUM : WII_BLOCK_NUM;
-    size_t lastBlockSize = discInfo->isGC ? GC_LAST_BLOCK_SIZE :
-        discInfo->isWII && discInfo->isDualLayer ? WII_DL_LAST_BLOCK_SIZE : WII_LAST_BLOCK_SIZE;
+    size_t discBlockNum = 0;
+    size_t lastBlockSize = 0;
+    if (discInfo->isWII && discInfo->isDualLayer) {
+        discBlockNum = WII_DL_BLOCK_NUM;
+        lastBlockSize = WII_DL_LAST_BLOCK_SIZE;
+    } else if(discInfo->isWII) {
+        discBlockNum = WII_BLOCK_NUM;
+        lastBlockSize = WII_LAST_BLOCK_SIZE;
+    } else if(discInfo->isGC) {
+        discBlockNum = GC_BLOCK_NUM;
+        lastBlockSize = GC_LAST_BLOCK_SIZE;
+    }
 
     printf("discBlockNum: %zu\n", discBlockNum);
     printf("lastBlockSize: %zx\n", lastBlockSize);
