@@ -81,7 +81,7 @@ struct DiscInfo * profileImage(char *file)
 
     discInfo->shrunkenSize = dataBlockNum - 1;
 
-    if (blockNum + 1 == WII_DL_BLOCK_NUM) {
+    if (blockNum == WII_DL_BLOCK_NUM) {
         discInfo->isDualLayer = true;
     }
 
