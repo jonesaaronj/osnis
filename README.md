@@ -17,7 +17,9 @@ If we use a single block of size 0x40000 bytes as a table to describe our shrunk
 So, here is my proposed format to describe a shrunken gamecube/wii image
 
 The first 8 byte block will just be a magic number to identify a shrunken image
-00-07 'O','S','N','I','S',0x00,'V','0'.  I'm starting at V0 for development and when there is a viable working algorithm I'll up it to V1
+00-07 'O','S','N','I','S',0x??,0x??
+where the first 0x?? is a version number and the second 0x?? is image type where 0x01 = GC, 0x10 = WII, and 0x11 is a Dual Layer WII 
+I'm starting at 0 for development and when there is a viable working algorithm I'll up it to 1
 
 Each block in our full image will be described by an 8 byte section in our table
 
