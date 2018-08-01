@@ -79,9 +79,7 @@ struct DiscInfo * profileImage(char *file)
     }
     fclose(f);
 
-    discInfo->shrunkenSize = dataBlockNum - 1;
-
-    if (blockNum == WII_DL_BLOCK_NUM) {
+    if (blockNum + 1 == WII_DL_BLOCK_NUM) {
         discInfo->isDualLayer = true;
     }
 
@@ -109,7 +107,7 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
         memcpy(discInfo->table, data, BLOCK_SIZE);
         discInfo->isShrunken = true;
 
-        // for shrunken images the disc type is at byte 16
+        /* for shrunken images the disc type is at byte 16
         switch(data[15]) {
             case 1: // GC_DISC
                 discInfo->isGC = true;
@@ -121,7 +119,7 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
                 discInfo->isWII = true;
                 discInfo->isDualLayer = true;
                 break;
-        }
+        }*/
 
     } else {
     	// the disc id comes from bytes 0 through 5
@@ -152,12 +150,6 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
             memcpy(discInfo->table, SHRUNKEN_MAGIC_WORD, 8);
         }
     }
-
-    discInfo->discBlockNum = discInfo->isGC ? GC_BLOCK_NUM :
-        discInfo->isWII && discInfo->isDualLayer ? WII_DL_BLOCK_NUM : WII_BLOCK_NUM;
-
-    discInfo->lastBlockSize = discInfo->isGC ? GC_LAST_BLOCK_SIZE :
-        discInfo->isWII && discInfo->isDualLayer ? WII_DL_LAST_BLOCK_SIZE : WII_LAST_BLOCK_SIZE;
 }
 
 /**
@@ -254,8 +246,6 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     }
 
     printf("%05d TOTAL BLOCKS\n", blockNum - 1);
-
-    printf("%05ld TOTAL SHRUNKEN BLOCKS\n", discInfo->shrunkenSize);
 
     int n = 5408;
     unsigned char * junk = getJunkBlock(n, discInfo->discId, discInfo->discNumber);

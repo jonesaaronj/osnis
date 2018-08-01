@@ -41,16 +41,21 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     getDiscInfo(discInfo, buffer);
     printDiscInfo(discInfo);
 
-    printf("discBlockNum: %zu\n", discInfo->discBlockNum);
-    printf("lastBlockSize: %zx\n", discInfo->lastBlockSize);
+    
+    size_t discBlockNum = discInfo->isGC ? GC_BLOCK_NUM :
+        discInfo->isWII && discInfo->isDualLayer ? WII_DL_BLOCK_NUM : WII_BLOCK_NUM;
+    size_t lastBlockSize = discInfo->isGC ? GC_LAST_BLOCK_SIZE :
+        discInfo->isWII && discInfo->isDualLayer ? WII_DL_LAST_BLOCK_SIZE : WII_LAST_BLOCK_SIZE;
+
+    printf("discBlockNum: %zu\n", discBlockNum);
+    printf("lastBlockSize: %zx\n", lastBlockSize);
 
     uint32_t lastAddr = 0;
     size_t read = 0;
-    for(int blockNum = 2; blockNum <= discInfo->discBlockNum; blockNum++) {
+    for(int blockNum = 2; blockNum <= discBlockNum; blockNum++) {
         
         // set the block size to write
-        size_t writeSize = (blockNum < discInfo->discBlockNum) ?
-            BLOCK_SIZE : discInfo->lastBlockSize;
+        size_t writeSize = (blockNum < discBlockNum) ? BLOCK_SIZE : lastBlockSize;
 
         // if 8 00s we are at the end of the disc
         // if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 8) == 0) {
@@ -101,7 +106,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                     return;
                 }
                 if (read != writeSize) {
-                    fprintf(stderr, "ERROR: %d of %zd\n", blockNum, discInfo->discBlockNum);
+                    fprintf(stderr, "ERROR: %d of %zd\n", blockNum, discBlockNum);
                     fprintf(stderr, "ERROR: read %zx != write %zx\n", read, writeSize);
                 }
             }
@@ -151,8 +156,13 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         return;
     }
 
-    printf("discBlockNum: %zu\n", discInfo->discBlockNum);
-    printf("lastBlockSize: %zx\n", discInfo->lastBlockSize);
+    size_t discBlockNum = discInfo->isGC ? GC_BLOCK_NUM :
+        discInfo->isWII && discInfo->isDualLayer ? WII_DL_BLOCK_NUM : WII_BLOCK_NUM;
+    size_t lastBlockSize = discInfo->isGC ? GC_LAST_BLOCK_SIZE :
+        discInfo->isWII && discInfo->isDualLayer ? WII_DL_LAST_BLOCK_SIZE : WII_LAST_BLOCK_SIZE;
+
+    printf("discBlockNum: %zu\n", discBlockNum);
+    printf("lastBlockSize: %zx\n", lastBlockSize);
 
     uint32_t prevCrc = 0;
     uint32_t dataBlockNum = 1;
@@ -161,11 +171,10 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
     while((read = fread(buffer, 1, BLOCK_SIZE, inputF)) > 0) {
 
         // set the block size to write
-        size_t writeSize = (blockNum < discInfo->discBlockNum - 1) ? 
-            BLOCK_SIZE : discInfo->lastBlockSize;
+        size_t writeSize = (blockNum < discBlockNum - 1) ? BLOCK_SIZE : lastBlockSize;
 
         if (read != writeSize) {
-            fprintf(stderr, "ERROR: %zd of %zd\n", blockNum, discInfo->discBlockNum);
+            fprintf(stderr, "ERROR: %zd of %zd\n", blockNum, discBlockNum);
             fprintf(stderr, "ERROR: read %zx != write %zx\n", read, writeSize);
         }
 
