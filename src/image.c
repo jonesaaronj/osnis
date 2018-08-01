@@ -62,7 +62,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
             // get the junk block and write it
             unsigned char * junk = getJunkBlock(blockNum - 1, discInfo->discId, discInfo->discNumber);
             // check the crc32 of the junk block and write if everthing is fine
-            uint32_t crc = crc32(junk, BLOCK_SIZE, 0);
+            uint32_t crc = crc32(junk, writeSize, 0);
             if (memcmp(&crc, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
                 if (fwrite(junk, writeSize, 1, outputF) != 1) {
                     fprintf(stderr, "ERROR: could not write block\n");
@@ -108,7 +108,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
             memcpy(&lastAddr, discInfo->table + (blockNum * 8) + 4, 4);
             
             // check the crc32 of the data block and write if everthing is fine
-            uint32_t crc = crc32(buffer, BLOCK_SIZE, 0);
+            uint32_t crc = crc32(buffer, writeSize, 0);
             if (memcmp(&crc, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
                 if (fwrite(buffer, writeSize, 1, outputF) != 1) {
                     fprintf(stderr, "ERROR: could not write block\n");
