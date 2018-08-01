@@ -150,8 +150,8 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
             fprintf(stderr, "ERROR: We are not a GC or WII disc\n");
             return;
         }
-
-        if (discInfo->table == null) {
+s
+        if (discInfo->table == NULL) {
             // create a partition table
             discInfo->table = calloc(1, BLOCK_SIZE);
 
