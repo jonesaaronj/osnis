@@ -47,3 +47,4 @@ This should provide a robust definition of an image that can be used to restore 
 
 ### TODO
 1. Figure out why WII images don't shrink as much as they should
+2. Update Nintendont and Dolphin to be able to read these images natively
