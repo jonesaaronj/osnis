@@ -68,6 +68,11 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                     fprintf(stderr, "ERROR: could not write block\n");
                     break;
                 }
+            } else {
+                uint32_t tableCrc;
+                memcpy(&tableCrc, discInfo->table + ((blockNum + 1) * 8) + 4, 4);
+                fprintf(stderr, "ERROR: crc error at %d\n", blockNum);
+                fprintf(stderr, "Block crc was %x but table crc was %x\n", crc, tableCrc);
             }
 
             if (blockNum == 5408) {
@@ -78,7 +83,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         }
 
         // if FEs we are a repeat junk block
-        if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
+        else if (memcmp(&FEs, discInfo->table + (blockNum * 8), 4) == 0) {
             unsigned char repeatByte = discInfo->table[((blockNum + 1) * 8) + 7];
             unsigned char repeat[BLOCK_SIZE] = {repeatByte};
             if (fwrite(repeat, writeSize, 1, outputF) != 1) {
