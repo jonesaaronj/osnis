@@ -5,6 +5,9 @@
 
 #define BLOCK_SIZE 0x40000
 
+/**
+ * Print out the unsigned character array to the given length in hex format
+ */
 void printChar(unsigned char *a, int length);
 
 /**

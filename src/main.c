@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
                     fprintf (stderr, "Option -%c requires an argument.\n", optopt);
                 }            
             default:
-                fprintf(stderr, "Usage: %s [-i inputFile] [-o outputFile]\n", argv[0]);
+                fprintf(stderr, "Usage: %s -s|-u [-i inputFile] [-o outputFile]\n", argv[0]);
                 return 1;
             }
     }
@@ -49,11 +49,12 @@ int main(int argc, char *argv[])
         printDiscInfo(discInfo);
     } else if(doShrink){
         // Creating a shrunken image will take two passes.
-        // One to prifile the disc and one to do the write the shrunken image
+        // One to prifile the disc and one to write the shrunken image
         struct DiscInfo * discInfo = profileImage(inputFile);
         printDiscInfo(discInfo);
         shrinkImage(discInfo, inputFile, outputFile);
     } else if(doUnshrink){
+        // Unshrinking an image can be done in a single pass
         unshrinkImage(inputFile, outputFile);
     }
 }

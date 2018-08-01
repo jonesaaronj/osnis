@@ -4,6 +4,9 @@
 #include <string.h>
 #include "hash.h"
 
+/**
+ * Print out the unsigned character array to the given length in hex format
+ */
 void printChar(unsigned char *a, int length)
 {
     for (int i = 0; i < length; i++) {
@@ -24,7 +27,6 @@ unsigned char * isUniform(unsigned char *a, int length)
     }
     return c;
 }
-
 
 /**
  * Determine if the two char arrays are the same for a given length

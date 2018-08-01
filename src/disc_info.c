@@ -62,9 +62,8 @@ struct DiscInfo * profileImage(char *file)
 
         // If this is not a junk block then it is a data block
         else {
-            // get the crc of the block and copy it to the table
+            // get the crc of the block
             uint32_t crc = crc32(buffer, read, 0);
-            memcpy(discInfo->table + ((blockNum + 1) * 8) + 4, &crc, 4);
 
             // only advance the block number if this was not a repeat block
             if (prevCrc != crc) {
@@ -72,8 +71,9 @@ struct DiscInfo * profileImage(char *file)
             }
             prevCrc = crc;
 
-            // copy the block number to the table
+            // copy the block number and crc to the table
             memcpy(discInfo->table + ((blockNum + 1) * 8), &dataBlockNum, 4);
+            memcpy(discInfo->table + ((blockNum + 1) * 8) + 4, &crc, 4);
         }
         blockNum++;
     }
