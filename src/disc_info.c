@@ -80,7 +80,7 @@ struct DiscInfo * profileImage(char *file)
     fclose(f);
 
     printf("bLAH: %zu %zu \n", blockNum, WII_DL_BLOCK_NUM);
-    if (blockNum + 1 == WII_DL_BLOCK_NUM) {
+    if (blockNum == WII_DL_BLOCK_NUM) {
         printf("Setting dual layer\n");
         discInfo->isDualLayer = true;
     }
