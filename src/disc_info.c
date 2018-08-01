@@ -83,7 +83,7 @@ struct DiscInfo * profileImage(char *file)
         discInfo->isDualLayer = true;
     }
 
-    // set the 
+    // set the disc type
     if (discInfo->isWII && discInfo->isDualLayer) {
         memset(discInfo->table + 7, WII_DL_DISC, 1);
     } else if(discInfo->isWII) {
@@ -104,7 +104,7 @@ struct DiscInfo * profileImage(char *file)
 void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
 {
 	// check for the shrunken magic word
-    bool isShrunken = memcmp(SHRUNKEN_MAGIC_WORD, data, 6) == 0;
+    bool isShrunken = memcmp(SHRUNKEN_MAGIC_WORD, data, 5) == 0;
 
     // if this is a shrunken disc image the first block
     // is the partition table and the second block has all the
@@ -118,13 +118,13 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
 
         // for shrunken images the disc type is at byte 7
         switch(data[7]) {
-            case 1: // GC_DISC
+            case 0x01: // GC_DISC
                 discInfo->isGC = true;
                 break;
-            case 2: // WII_DISC
+            case 0x10: // WII_DISC
                 discInfo->isWII = true;
                 break;
-            case 3: // WII_DL_DISC
+            case 0x11: // WII_DL_DISC
                 discInfo->isWII = true;
                 discInfo->isDualLayer = true;
                 break;
@@ -156,7 +156,7 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
             discInfo->table = calloc(1, BLOCK_SIZE);
 
             // write the shrunken magic word to the partition table
-            memcpy(discInfo->table, SHRUNKEN_MAGIC_WORD, 8);
+            memcpy(discInfo->table, SHRUNKEN_MAGIC_WORD, 5);
         }
     }
 }
