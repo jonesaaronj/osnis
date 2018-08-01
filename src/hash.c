@@ -8,6 +8,9 @@ void printChar(unsigned char *a, int length)
 {
     for (int i = 0; i < length; i++) {
         printf("%x", a[i]);
+        if (i > 1 && i % 8 == 0) {
+            printf("\n");
+        }
     }
 }
 
