@@ -72,11 +72,6 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         // set the block size to write
         size_t writeSize = (blockNum < discBlockNum) ? BLOCK_SIZE : lastBlockSize;
 
-        // if 8 00s we are at the end of the disc
-        // if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 8) == 0) {
-        //    break;
-        //}
-
         // if FFs we are a junk block
         if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
             // get the junk block and write it
