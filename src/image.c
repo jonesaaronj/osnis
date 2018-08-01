@@ -60,7 +60,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         // if FFs we are a junk block
         if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
             // get the junk block and write it
-            unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
+            unsigned char * junk = getJunkBlock(blockNum + 1, discInfo->discId, discInfo->discNumber);
             // check the crc32 of the junk block and write if everthing is fine
             uint32_t crc = crc32(junk, BLOCK_SIZE, 0);
             if (memcmp(&crc, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
