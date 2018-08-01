@@ -45,7 +45,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     printChar(discInfo->table, 8);
     printChar(discInfo->table + 8, 8);
     printChar(discInfo->table + 16, 8);
-    printf("Table: \n");
+    printf("\nTable: \n");
 
     size_t discBlockNum = discInfo->isGC ? GC_BLOCK_NUM :
         discInfo->isWII && discInfo->isDualLayer ? WII_DL_BLOCK_NUM : WII_BLOCK_NUM;
