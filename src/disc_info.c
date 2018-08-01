@@ -104,7 +104,7 @@ struct DiscInfo * profileImage(char *file)
 void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
 {
 	// check for the shrunken magic word
-    bool isShrunken = memcmp(SHRUNKEN_MAGIC_WORD, data, 8) == 0;
+    bool isShrunken = memcmp(SHRUNKEN_MAGIC_WORD, data, 6) == 0;
 
     // if this is a shrunken disc image the first block
     // is the partition table and the second block has all the
