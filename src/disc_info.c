@@ -21,7 +21,7 @@ struct DiscInfo * profileImage(char *file)
     unsigned char * buffer = calloc(1, BLOCK_SIZE);
     unsigned char * repeatByte;
     uint32_t prevCrc = 0;
-    uint32_t dataBlockNum = 1;
+    uint32_t dataBlockNum = 0;
     size_t blockNum = 0;
     size_t read;
     while((read = fread(buffer, 1, BLOCK_SIZE, f)) > 0) {
