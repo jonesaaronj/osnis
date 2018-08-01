@@ -8,9 +8,9 @@ static const uint64_t FFs = 0xFFFFFFFFFFFFFFFF;
 static const uint64_t FEs = 0xFEFEFEFEFEFEFEFE;
 static const uint64_t ZEROs = 0x0;
 
-static const unsigned char GC_DISC = 1;
-static const unsigned char WII_DISC = 2;
-static const unsigned char WII_DL_DISC = 3;
+static const unsigned char GC_DISC = 0x01;
+static const unsigned char WII_DISC = 0x10;
+static const unsigned char WII_DL_DISC = 0x11;
 
 static const size_t GC_LAST_BLOCK_SIZE = 0x18000;
 static const size_t WII_LAST_BLOCK_SIZE = 0x40000;

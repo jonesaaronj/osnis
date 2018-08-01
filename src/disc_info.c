@@ -79,10 +79,17 @@ struct DiscInfo * profileImage(char *file)
     }
     fclose(f);
 
-    printf("bLAH: %zu %zu \n", blockNum, WII_DL_BLOCK_NUM);
     if (blockNum == WII_DL_BLOCK_NUM) {
-        printf("Setting dual layer\n");
         discInfo->isDualLayer = true;
+    }
+
+    // set the 
+    if (discInfo->isWII && discInfo->isDualLayer) {
+        memset(discInfo->table + 7, WII_DL_DISC, 1);
+    } else if(discInfo->isWII) {
+        memset(discInfo->table + 7, WII_DISC, 1);
+    } else if(discInfo->isGC) {
+        memset(discInfo->table + 7, GC_DISC, 1);
     }
 
     return discInfo;
@@ -109,8 +116,8 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
         memcpy(discInfo->table, data, BLOCK_SIZE);
         discInfo->isShrunken = true;
 
-        /* for shrunken images the disc type is at byte 16
-        switch(data[15]) {
+        // for shrunken images the disc type is at byte 7
+        switch(data[7]) {
             case 1: // GC_DISC
                 discInfo->isGC = true;
                 break;
@@ -121,7 +128,7 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
                 discInfo->isWII = true;
                 discInfo->isDualLayer = true;
                 break;
-        }*/
+        }
 
     } else {
     	// the disc id comes from bytes 0 through 5
@@ -164,8 +171,6 @@ void printDiscInfo(struct DiscInfo * discInfo) {
         fprintf(stderr, "ERROR: We are not a GC or WII disc\n");
         return;
     }
-
-    printf("Am I dual layer? %s\n", discInfo->isDualLayer? "yes":"no");
 
     if (discInfo->isShrunken) printf("Shrunken ");
     if (discInfo->isDualLayer) printf("Dual Layer ");
