@@ -151,7 +151,7 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
             return;
         }
 
-        if (discInfo->table == NULL) {
+        if (!isShrunken) {
             // create a partition table
             discInfo->table = calloc(1, BLOCK_SIZE);
 
