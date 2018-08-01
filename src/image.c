@@ -93,12 +93,17 @@ void unshrinkImage(char *inputFile, char *outputFile) {
             memcpy(&lastAddr, discInfo->table + (blockNum * 8) + 4, 4);
             
             // check the crc32 of the data block and write if everthing is fine
-            uint32_t crc = crc32(buffer, read, 0);
+            uint32_t crc = crc32(buffer, BLOCK_SIZE, 0);
             if (memcmp(&crc, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
                 if (fwrite(buffer, writeSize, 1, outputF) != 1) {
                     fprintf(stderr, "ERROR: could not write block\n");
                     break;
                 }
+            } else {
+                uint32_t tableCrc;
+                memcpy(&tableCrc, discInfo->table + ((blockNum + 1) * 8) + 4, 4);
+                fprintf(stderr, "ERROR: crc error at %d\n", blockNum);
+                fprintf(stderr, "Block crc was %x but table crc was %x\n", crc, tableCrc);
             }
         }
     }
