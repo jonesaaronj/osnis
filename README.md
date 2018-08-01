@@ -15,8 +15,8 @@ Gamecube/Wii discs seem to work on a block size of 0x40000(262,144) bytes
 * Wii Dual Layer ISO
   * 0x1FB4E0000(8,511,160,320) bytes
   * 32,467 0x40000(262,144) byte blocks
-  * 1 0x20000(131072 byte block
-  * 32468 blocks total
+  * 1 0x20000(131072) byte block
+  * 32,468 blocks total
 
 ## So, here is my proposed format to describe a shrunken gamecube/wii image
 If we use a single block of size 0x40000 bytes as a table to describe our shrunken image and if the largest image (a dual layer wii image) has 32,468 blocks then each block can have 8 bytes available to describe it within our table.
@@ -44,3 +44,6 @@ If we use a single block of size 0x40000 bytes as a table to describe our shrunk
   * Once we see an entry of all 0's we are at the end of our image and can ignore all future blocks, which should also be zero.
 
 This should provide a robust definition of an image that can be used to restore an exact duplicate of the original image as long as the junk generating algorithm is known.  Also, this should be an efficient image for being able to randomly access any given byte of a shrunken image as if it was the original image just by doing a lookup in the table and then either seeking to the location within the shrunken image, or by generating the junk data as necessary.
+
+### TODO
+1. Figure out why WII images don't shrink as much as they should
