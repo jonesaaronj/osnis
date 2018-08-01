@@ -16,10 +16,10 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     // if file pointer is empty write to stdout
     FILE *outputF = (outputFile != NULL) ? fopen(outputFile, "wb") : stdout;
 
-    struct DiscInfo *discInfo = calloc(sizeof(struct DiscInfo), 1);
-    
     // Do all of our reading in 0x40000 byte blocks
     unsigned char * buffer = calloc(1, BLOCK_SIZE);
+
+    struct DiscInfo *discInfo = calloc(sizeof(struct DiscInfo), 1);
 
     // get the partition table from the first block
     if (fread(buffer, 1, BLOCK_SIZE, inputF) != BLOCK_SIZE){
@@ -27,10 +27,8 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         return;
     }
     getDiscInfo(discInfo, buffer);
-
-    // get the first block of our data and write it
     if (fread(buffer, 1, BLOCK_SIZE, inputF) != BLOCK_SIZE){
-        fprintf(stderr, "ERROR: could not read block\n");
+        fprintf(stderr, "ERROR: could not read partition table\n");
         return;
     }
     if (fwrite(buffer, 1, BLOCK_SIZE, outputF) != BLOCK_SIZE) {
@@ -40,34 +38,36 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     getDiscInfo(discInfo, buffer);
     printDiscInfo(discInfo);
 
-    size_t discBlockNum = discInfo->isGC ? GC_BLOCK_NUM :
-        discInfo->isWII && discInfo->isDualLayer ? WII_DL_BLOCK_NUM : WII_BLOCK_NUM;
-
-    size_t lastBlockSize = discInfo->isGC ? GC_LAST_BLOCK_SIZE :
-        discInfo->isWII && discInfo->isDualLayer ? WII_DL_LAST_BLOCK_SIZE : WII_LAST_BLOCK_SIZE;
-
-    fprintf(stderr, "Block Num %zd\n", discBlockNum);
-    fprintf(stderr, "Last Block Size %zx\n", lastBlockSize);
-
     uint32_t lastAddr = 0;
     size_t read = 0;
-    for(int blockNum = 2; blockNum <= discBlockNum; blockNum++) {
+    for(int blockNum = 2; blockNum <= discInfo->discBlockNum; blockNum++) {
         
         // set the block size to write
-        size_t writeSize = (blockNum < discBlockNum) ? BLOCK_SIZE : lastBlockSize;
+        size_t writeSize = (blockNum < discInfo->discBlockNum) ?
+            BLOCK_SIZE : discInfo->lastBlockSize;
 
         // if 8 00s we are at the end of the disc
-        if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 8) == 0) {
-            break;
-        }
+        //if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 8) == 0) {
+        //    break;
+        //}
 
-        // if 8 FFs we are a junk block
-        else if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + (blockNum * 8), 8) == 0) {
+        // if FFs we are a junk block
+        if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
             // get the junk block and write it
-            unsigned char * junk = getJunkBlock(blockNum - 2, discInfo->discId, discInfo->discNumber);
-            if (fwrite(junk, writeSize, 1, outputF) != 1) {
-                fprintf(stderr, "ERROR: could not write block\n");
-                break;
+            unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
+            // check the crc32 of the data block and write if everthing is fine
+            uint32_t crc = crc32(junk, BLOCK_SIZE, 0);
+            if (memcmp(&crc, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
+                if (fwrite(junk, writeSize, 1, outputF) != 1) {
+                    fprintf(stderr, "ERROR: could not write block\n");
+                    break;
+                }
+            }
+
+            if (blockNum == 5408) {
+                printf("Junk3 at %d is ", blockNum);
+                printChar(junk, 20);
+                printf("\n");
             }
         }
 
@@ -80,7 +80,7 @@ void unshrinkImage(char *inputFile, char *outputFile) {
                     return;
                 }
                 if (read != writeSize) {
-                    fprintf(stderr, "ERROR: %d of %zd\n", blockNum, discBlockNum);
+                    fprintf(stderr, "ERROR: %d of %zd\n", blockNum, discInfo->discBlockNum);
                     fprintf(stderr, "ERROR: read %zx != write %zx\n", read, writeSize);
                 }
             }
@@ -110,15 +110,6 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         return;
     }
 
-    size_t discBlockNum = discInfo->isGC ? GC_BLOCK_NUM :
-        discInfo->isWII && discInfo->isDualLayer ? WII_DL_BLOCK_NUM : WII_BLOCK_NUM;
-
-    size_t lastBlockSize = discInfo->isGC ? GC_LAST_BLOCK_SIZE :
-        discInfo->isWII && discInfo->isDualLayer ? WII_DL_LAST_BLOCK_SIZE : WII_LAST_BLOCK_SIZE;
-
-    fprintf(stderr, "Block Num %zd\n", discBlockNum);
-    fprintf(stderr, "Last Block Size %zx\n", lastBlockSize);
-
     // if file pointer is empty read from stdin
     FILE *inputF = (inputFile != NULL) ? fopen(inputFile, "rb") : stdin;
     // if file pointer is empty read from stdout
@@ -141,31 +132,43 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
     while((read = fread(buffer, 1, BLOCK_SIZE, inputF)) > 0) {
 
         // set the block size to write
-        size_t writeSize = (blockNum < discBlockNum - 1) ? BLOCK_SIZE : lastBlockSize;
+        size_t writeSize = (blockNum < discInfo->discBlockNum - 1) ? 
+            BLOCK_SIZE : discInfo->lastBlockSize;
+
         if (read != writeSize) {
-            fprintf(stderr, "ERROR: %zd of %zd\n", blockNum, discBlockNum);
+            fprintf(stderr, "ERROR: %zd of %zd\n", blockNum, discInfo->discBlockNum);
             fprintf(stderr, "ERROR: read %zx != write %zx\n", read, writeSize);
         }
 
         // get the junk block
         unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
+        if (blockNum == 5408) {
+            printf("Junk2 at %ld is ", blockNum);
+            printChar(junk, 20);
+            printf("\n");
+        }
 
         // get the crc32 of the data block
         uint32_t crc = crc32(buffer, read, 0);
 
         // if this is a junk block skip writing it
         if (isSame(buffer, junk, read)) {
-            // fprintf(stderr, "skipping junk block %d\n", blockNum);
-            if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + ((blockNum + 1) * 8), 8) != 0) {
+            if (memcmp(&FFs, discInfo->table + ((blockNum + 1) * 8), 4) != 0) {
                 fprintf(stderr, "ERROR: Saw a junk block at %zu but expected something else\n", blockNum);
+                break;
+            }
+            if (memcmp(&crc, discInfo->table + ((blockNum + 1) * 8) + 4, 4) != 0) {
+                uint32_t tableCrc;
+                memcpy(&tableCrc, discInfo->table + ((blockNum + 1) * 8) + 4, 4);
+                fprintf(stderr, "ERROR: crc error at %lu\n", blockNum);
+                fprintf(stderr, "Block crc was %x but table crc was %x\n", crc, tableCrc);
                 break;
             }
         }
 
         // if this is a repeated block skip writing it
         else if((repeatByte = isUniform(buffer, read)) != NULL) {
-            // fprintf(stderr, "skipping repeat block %d\n", blockNum);
-            if (memcmp(&FFs, discInfo->table + ((blockNum + 1) * 8), 4) != 0) {
+            if (memcmp(&ZEROs, discInfo->table + ((blockNum + 1) * 8), 4) != 0) {
                 fprintf(stderr, "ERROR: Saw a repeat block at %zu but expected something else\n", blockNum);
                 break;
             }
@@ -202,7 +205,6 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
             }
             prevCrc = crc;
         }
-
         blockNum++;
     }
     fclose(inputF);

@@ -5,6 +5,8 @@
 
 static const size_t BLOCK_SIZE = 0x40000;
 
+void printChar(unsigned char *a, int length);
+
 /**
  * Determine if the char array is fillied with the same char for a given length
  */

@@ -4,6 +4,13 @@
 #include <string.h>
 #include "hash.h"
 
+void printChar(unsigned char *a, int length)
+{
+    for (int i = 0; i < length; i++) {
+        printf("%x", a[i]);
+    }
+}
+
 /**
  * Determine if the char array is fillied with the same char for a given length
  */

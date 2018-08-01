@@ -20,13 +20,9 @@ struct DiscInfo * profileImage(char *file)
     // Do all of our reading in 0x40000 byte blocks
     unsigned char * buffer = calloc(1, BLOCK_SIZE);
     unsigned char * repeatByte;
-
     uint32_t prevCrc = 0;
-
-    // force our blockNum to be an unsigned 64 bit int (8 bytes * 8 bits)
-    // to make copying to the partition table easier
-    uint64_t blockNum = 0;
     uint32_t dataBlockNum = 1;
+    size_t blockNum = 0;
     size_t read;
     while((read = fread(buffer, 1, BLOCK_SIZE, f)) > 0) {
 
@@ -48,14 +44,18 @@ struct DiscInfo * profileImage(char *file)
 
         // check if this is a junk block
         if (isSame(buffer, junk, read)) {
-            // Write the junk block magic word to our partition table
-            memcpy(discInfo->table + ((blockNum + 1) * 8), &JUNK_BLOCK_MAGIC_WORD, 8);
+            // Write ffs to the partition table for the address
+            memcpy(discInfo->table + ((blockNum + 1) * 8), &FFs, 4);
+
+            // get the crc of the junk block and copy it to the table
+            uint32_t crc = crc32(junk, read, 0);
+            memcpy(discInfo->table + ((blockNum + 1) * 8) + 4, &crc, 4);
         }
 
-        // check if this is a repeated junk data
+        // check if this is a block of repeated junk byte
         else if((repeatByte = isUniform(buffer, read)) != NULL) {
             // write our repeated byte to the partition table
-            memcpy(discInfo->table + ((blockNum + 1) * 8), &FFs, 4);
+            memcpy(discInfo->table + ((blockNum + 1) * 8), &ZEROs, 7);
             memcpy(discInfo->table + ((blockNum + 1)* 8) + 7, repeatByte, 1);
         }
 
@@ -151,6 +151,12 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
             memcpy(discInfo->table, SHRUNKEN_MAGIC_WORD, 8);
         }
     }
+
+    discInfo->discBlockNum = discInfo->isGC ? GC_BLOCK_NUM :
+        discInfo->isWII && discInfo->isDualLayer ? WII_DL_BLOCK_NUM : WII_BLOCK_NUM;
+
+    discInfo->lastBlockSize = discInfo->isGC ? GC_LAST_BLOCK_SIZE :
+        discInfo->isWII && discInfo->isDualLayer ? WII_DL_LAST_BLOCK_SIZE : WII_LAST_BLOCK_SIZE;
 }
 
 /**
@@ -187,8 +193,8 @@ void printDiscInfo(struct DiscInfo * discInfo) {
             break;
         }
 
-        // if you see the junk magic word this is a junk block
-        else if (memcmp(&JUNK_BLOCK_MAGIC_WORD, discInfo->table + (blockNum * 8), 8) == 0) {
+        // if you see FF address this is a junk block
+        else if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
             if (dataCount > 0){
                 printf("%05d blocks of data\n", dataCount);
                 dataCount = 0;
@@ -200,8 +206,8 @@ void printDiscInfo(struct DiscInfo * discInfo) {
             generatedJunkCount++;
         }
 
-        // if 4 FFs we are a repeat block
-        else if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
+        // if you see 00 address this is a repeat block
+        else if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 4) == 0) {
             if (generatedJunkCount > 0) {
                 printf("%05d blocks of junk\n", generatedJunkCount);
                 generatedJunkCount = 0;
@@ -249,4 +255,10 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     printf("%05d TOTAL BLOCKS\n", blockNum - 1);
 
     printf("%05ld TOTAL SHRUNKEN BLOCKS\n", discInfo->shrunkenSize);
+
+    int n = 5408;
+    unsigned char * junk = getJunkBlock(n, discInfo->discId, discInfo->discNumber);
+    printf("Junk1 at %d is ", n);
+    printChar(junk, 20);
+    printf("\n");
 }
