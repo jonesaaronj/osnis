@@ -43,7 +43,9 @@ void unshrinkImage(char *inputFile, char *outputFile) {
 
     printf("Table: \n");
     printChar(discInfo->table, 8);
+    printf("\n");
     printChar(discInfo->table + 8, 8);
+    printf("\n");
     printChar(discInfo->table + 16, 8);
     printf("\nTable: \n");
 
