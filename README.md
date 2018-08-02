@@ -67,6 +67,34 @@ requires windows gcc
 ```
 gcc src\crc32.c src\hash.c src\image.c src\disc_info.c src\main.c -o osnis
 ```
+## USAGE
+
+#### To profile an image
+```
+osnis -p -i game.iso
+```
+Also works with stdin
+```
+cat game.iso | osnis -p
+```
+
+#### To shrink an image
+```
+osnis -s -i game.iso -o game.iso.osnis
+```
+or with stdout (shrinking takes two passes so no stdin)
+```
+osnis -s -i game.iso > game.iso.osnis
+```
+
+##### To unshrink an image
+```
+osnis -u -i game.iso.osnis -o game.iso
+```
+or with stdin and stdout
+```
+cat game.iso.osnis | osnis -u > game.iso
+```
 
 ## TODO
 1. Make it work on wierd one off images that I don't know about yet
