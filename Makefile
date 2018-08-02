@@ -1,5 +1,5 @@
 CC = cc
-MINGW = i686-w64-mingw32-gcc
+MINGW = x86_64-w64-mingw32-gcc
 CFLAGS = -std=c99 -Wall
 SRC_DIR = src
 TARGET = osnis
