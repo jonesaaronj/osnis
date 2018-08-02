@@ -2,7 +2,7 @@
 
 nNasos already exists, why write yet another nintendo image shrinker? Well, nNasos is not open source and I want some kind of shurunken image support in Nintendont so I decided to create my own.  From what little I have been able to discern from the DEC image format I also believe this image format will be superior for random access.
 
-## The Tech stuff
+## Design notes
 
 Gamecube/Wii discs seem to be mastered on a block size of 0x40000(262,144) bytes
 
@@ -49,6 +49,24 @@ If we use a single block of size 0x40000 bytes as a table to describe our shrunk
   * Once we see an entry of all 0's we are at the end of our image and can ignore all future blocks, which should also be zero.
 
 This should provide a robust definition of an image that can be used to restore an exact duplicate of the original image as long as the junk generating algorithm is known.  Also, this should be an efficient image for being able to randomly access any given byte of a shrunken image as if it was the original image just by doing a lookup in the table and then either seeking to the location within the shrunken image, or by generating the junk data as necessary.
+
+## Buiding
+### Linux
+requires gcc
+
+```
+make
+```
+## OSX
+requires clang
+```
+make
+```
+### Windows
+requires windows gcc
+```
+gcc src\crc32.c src\hash.c src\image.c src\disc_info.c src\main.c -o osnis
+```
 
 ## TODO
 1. Make it work on wierd one off images that I don't know about yet
