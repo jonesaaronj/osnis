@@ -1,6 +1,6 @@
 # Open Source Nintendo Image Shrinker
 
-nNasos already exists, why write yet another nintendo image shrinker? Well, nNasos is not open source and I want some kind of shurunken image support in Nintendont so I decided to create my own.  From what little I have been able to discern from the DEC image format I also believe this image format will be superior for random access.
+Several image shrinkers already exists, why write yet another one?  Well, none of them are open source and it can be very hard to find out any information about them or to collaborate on them.  I very much want hurunken image support in Nintendont and USBLoaderGX so I decided to create my own.
 
 ## Design notes
 
