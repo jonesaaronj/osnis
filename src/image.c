@@ -54,8 +54,8 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         lastBlockSize = GC_LAST_BLOCK_SIZE;
     }
 
-    fprintf(stderr, "discBlockNum: %zu\n", discBlockNum);
-    fprintf(stderr, "lastBlockSize: %zx\n", lastBlockSize);
+    // fprintf(stderr, "discBlockNum: %zu\n", discBlockNum);
+    // fprintf(stderr, "lastBlockSize: %zx\n", lastBlockSize);
 
     uint32_t lastAddr = 0;
     size_t read = 0;
@@ -168,8 +168,8 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         lastBlockSize = GC_LAST_BLOCK_SIZE;
     }
 
-    fprintf(stderr, "discBlockNum: %zu\n", discBlockNum);
-    fprintf(stderr, "lastBlockSize: %zx\n", lastBlockSize);
+    // fprintf(stderr, "discBlockNum: %zu\n", discBlockNum);
+    // fprintf(stderr, "lastBlockSize: %zx\n", lastBlockSize);
 
     uint32_t prevCrc = 0;
     uint32_t dataBlockNum = 0;
