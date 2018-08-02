@@ -51,12 +51,21 @@ If we use a single block of size 0x40000 bytes as a table to describe our shrunk
 This should provide a robust definition of an image that can be used to restore an exact duplicate of the original image as long as the junk generating algorithm is known.  Also, this should be an efficient image for being able to randomly access any given byte of a shrunken image as if it was the original image just by doing a lookup in the table and then either seeking to the location within the shrunken image, or by generating the junk data as necessary.
 
 ## Buiding
-### Linux/osx
+### Linux
+requires gcc
+
 ```
-# make
+make
+```
+## OSX
+requires clang
+```
+make
 ```
 ### Windows
+requires windows gcc
 ```
+gcc src\crc32.c src\hash.c src\image.c src\disc_info.c src\main.c -o osnis
 ```
 
 ## TODO
