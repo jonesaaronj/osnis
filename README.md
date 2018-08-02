@@ -1,6 +1,6 @@
 # Open Source Nintendo Image Shrinker
 
-nNasos already exists, why write yet another nintendo image shrinker? Well, nNasos is not open source and I want some kind of shurunken image support in Nintendont so I decided to create my own.  From what little I have been able to discern from the DEC image format I also believe this image format will be superior for random access.
+Several image shrinkers already exists, why write yet another one?  Well, none of them are open source and it can be very hard to find out any information about them or to collaborate on them.  I very much want hurunken image support in Nintendont and USBLoaderGX so I decided to create my own.
 
 ## Design notes
 
@@ -67,8 +67,37 @@ requires windows gcc
 ```
 gcc src\crc32.c src\hash.c src\image.c src\disc_info.c src\main.c -o osnis
 ```
+## USAGE
+
+#### To profile an image
+```
+osnis -p -i game.iso
+```
+Also works with stdin
+```
+cat game.iso | osnis -p
+```
+
+#### To shrink an image
+```
+osnis -s -i game.iso -o game.iso.osnis
+```
+or with stdout (shrinking takes two passes so no stdin)
+```
+osnis -s -i game.iso > game.iso.osnis
+```
+
+##### To unshrink an image
+```
+osnis -u -i game.iso.osnis -o game.iso
+```
+or with stdin and stdout
+```
+cat game.iso.osnis | osnis -u > game.iso
+```
 
 ## TODO
-1. Make it work on wierd one off images that I don't know about yet
-2. Figure out why WII images don't shrink as much as they should
-3. Update Nintendont and Dolphin to be able to read these images natively
+1. Make it work on wierd one off images that I don't know much about yet
+2. Play arround with different block sizes to see if that improves shrinkage
+3. Figure out why WII images don't shrink as much as they should
+4. Update Nintendont and Dolphin to be able to read these images natively
