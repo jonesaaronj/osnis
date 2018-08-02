@@ -97,6 +97,7 @@ cat game.iso.osnis | osnis -u > game.iso
 ```
 
 ## TODO
-1. Make it work on wierd one off images that I don't know about yet
-2. Figure out why WII images don't shrink as much as they should
-3. Update Nintendont and Dolphin to be able to read these images natively
+1. Make it work on wierd one off images that I don't know much about yet
+2. Play arround with different block sizes to see if that improves shrinkage
+3. Figure out why WII images don't shrink as much as they should
+4. Update Nintendont and Dolphin to be able to read these images natively
