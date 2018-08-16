@@ -29,19 +29,6 @@ unsigned char * isUniform(unsigned char *a, int length)
 }
 
 /**
- * Determine if the two char arrays are the same for a given length
- */
-bool isSame(unsigned char * a, unsigned char * b, int length)
-{
-    for (int i = 0; i < length; i++) {
-        if (memcmp(a + i, b + i, 1) != 0) {
-            return false;
-        }
-    }
-    return true;
-}
-
-/**
  * Do some crazy junk creation stuff
  */
 void a100026e0(unsigned int buffer[])
@@ -84,14 +71,14 @@ void a10002710(unsigned int sample, unsigned int buffer[])
  */
 unsigned char * getJunkBlock(unsigned int blockCount, unsigned char id[], unsigned char discNumber)
 {
-    unsigned char * garbageBlock = calloc(1, BLOCK_SIZE);
+    unsigned char * garbageBlock = calloc(1, JUNK_BLOCK_SIZE);
     
     unsigned int buffer[0x824] = {0};
     unsigned int sample = 0;
     blockCount = blockCount * 8 * 0x1ef29123;
     
     int j = 0;
-    for (int i = 0; i < BLOCK_SIZE; i += 4) {
+    for (int i = 0; i < JUNK_BLOCK_SIZE; i += 4) {
         if ((i & 0x00007fff) == 0) {
             sample = (((((unsigned int)id[2] << 0x8) | id[1]) << 0x10) | ((unsigned int)(id[3] + id[2]) << 0x8)) | (unsigned int)(id[0] + id[1]);
             sample = ((sample ^ discNumber) * 0x260bcd5) ^ blockCount;

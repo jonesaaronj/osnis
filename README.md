@@ -4,23 +4,21 @@ Several image shrinkers already exists, why write yet another one?  Well, none o
 
 ## Design notes
 
-Gamecube/Wii discs seem to be mastered on a block size of 0x40000(262,144) bytes
+Gamecube/Wii discs seem to work on a sector size of 0x8000(32,768) bytes
 
 ### Here is some useful information about various Nintendo iso images
 
-* GC ISO
-  * 0x57058000(1,459,978,240) bytes
-  * 5569 0x40000(262,144) byte blocks
-  * 1 0x18000(98,304) byte block
-  * 5,570 blocks total
-* Wii Single Layer ISO
-  * 0x118240000(4,699,979,776) bytes
-  * 17,929 0x40000(262,144) byte blocks
-* Wii Dual Layer ISO
-  * 0x1FB4E0000(8,511,160,320) bytes
-  * 32,467 0x40000(262,144) byte blocks
-  * 1 0x20000(131072) byte block
-  * 32,468 blocks total
+GC ISO 0x57058000(1,459,978,240) bytes
+44,555(0xAE0B) sectors
+356,440 byte, 11 sector pt
+
+Wii Single Layer ISO 0x118240000(4,699,979,776) bytes
+143,432(0x23048) sectors
+1,147,456 byte, 36 sector pt
+
+Wii Dual Layer ISO 0x1FB4E0000(8,511,160,320) bytes
+259,740(0x3F69C) sectors
+2,077,920 byte, 64 sector pt
 
 ### Here is my proposed format to describe a shrunken gamecube/wii image with an optimization towards random access/lookup
 If we use a single block of size 0x40000 bytes as a table to describe our shrunken image and if the largest image (a dual layer wii image) has 32,468 blocks then each block can have 8 bytes available to describe it within our table.
@@ -28,10 +26,12 @@ If we use a single block of size 0x40000 bytes as a table to describe our shrunk
 #### Each block in our full image will be described by an 8 byte section in our table
 
 #### The first 8 byte section will just be a magic number to identify a shrunken image
-* 00-07 'O','S','N','I','S',0x00,0x??,0x??
-* where the first 0x?? is a version number
-* I'm starting at 0 for development and when there is a viable working algorithm I'll up it to 1
-* the second 0x?? is image type where 0x01 = GC, 0x10 = WII, and 0x11 is a Dual Layer WII 
+00-07 'O','S','N','I','S',0xXX,0xYY,0xZZ
+0xXX is a version number, I'm starting at 0 for development and when there is a viable working algorithm I'll up it to 1
+0xYY is image type where 0x01 = GC, 0x10 = WII, and 0x11 is a Dual Layer WII
+0xZZ is the number of sectors of the partition table
+
+Each sector in our full image will be described by an 8 byte section in our table
 
 #### Each additional section will describe a block of data
 * Data block

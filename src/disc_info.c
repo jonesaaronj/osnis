@@ -17,47 +17,54 @@ struct DiscInfo * profileImage(char *file)
 
     struct DiscInfo *discInfo = calloc(sizeof(struct DiscInfo), 1);
     
-    // Do all of our reading in 0x40000 byte blocks
-    unsigned char * buffer = calloc(1, BLOCK_SIZE);
+    // Do all of our reading in blocks the size of our sector
+    unsigned char * buffer = calloc(1, SECTOR_SIZE);
+    unsigned char * junk = NULL;
     unsigned char * repeatByte;
     uint32_t prevCrc = 0;
-    uint32_t dataBlockNum = 0;
-    size_t blockNum = 0;
+    uint32_t dataSector = 64;
+    size_t sector = 0;
     size_t read;
-    while((read = fread(buffer, 1, BLOCK_SIZE, f)) > 0) {
+    while((read = fread(buffer, 1, SECTOR_SIZE, f)) > 0) {
 
         // get the disc info from the first block
-        if (blockNum == 0) {
-            getDiscInfo(discInfo, buffer);
+        if (sector == 0) {
+            getDiscInfo(discInfo, buffer, sector);
         }
 
         // if the first block has the shrunken magic word this 
         // is a shrunken image and the first block is the partition
-        // table and the disc info will be in the second block
-        else if (blockNum == 1 && discInfo->isShrunken) {
-            getDiscInfo(discInfo, buffer);
-            return discInfo;
+        // table and the disc info will be in the next sectors
+        else if (discInfo->isShrunken) {
+            if (sector <= discInfo->tableSectors) {
+                getDiscInfo(discInfo, buffer, sector);
+            } else {
+                return discInfo;
+            }
         }
 
-        // get the junk block for this block number
+        // get the junk block for this sector number
         // for the purposes of getting junk the blockNum starts at 0
-        unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
+        // junk blocks get created at a block size of 0x40000
+        if (sector % JUNK_SECTOR_SIZE == 0) {
+            junk = getJunkBlock(sector / JUNK_SECTOR_SIZE, discInfo->discId, discInfo->discNumber);
+        }
 
         // check if this is a junk block
-        if (isSame(buffer, junk, read)) {
+        if (memcmp(buffer, junk + (sector * SECTOR_SIZE), read) == 0) {
             // Write ffs to the partition table for the address
-            memcpy(discInfo->table + ((blockNum + 1) * 8), &FFs, 4);
+            memcpy(discInfo->table + ((sector + 1) * 8), &FFs, 4);
 
             // get the crc of the junk block and copy it to the table
-            uint32_t crc = crc32(junk, read, 0);
-            memcpy(discInfo->table + ((blockNum + 1) * 8) + 4, &crc, 4);
+            uint32_t crc = crc32(junk + (sector * SECTOR_SIZE), read, 0);
+            memcpy(discInfo->table + ((sector + 1) * 8) + 4, &crc, 4);
         }
 
         // check if this is a block of repeated junk byte
         else if((repeatByte = isUniform(buffer, read)) != NULL) {
             // write our repeated byte to the partition table
-            memcpy(discInfo->table + ((blockNum + 1) * 8), &FEs, 4);
-            memcpy(discInfo->table + ((blockNum + 1)* 8) + 7, repeatByte, 1);
+            memcpy(discInfo->table + ((sector + 1) * 8), &FEs, 4);
+            memcpy(discInfo->table + ((sector + 1) * 8) + 7, repeatByte, 1);
         }
 
         // If this is not a junk block then it is a data block
@@ -67,74 +74,81 @@ struct DiscInfo * profileImage(char *file)
 
             // only advance the block number if this was not a repeat block
             if (prevCrc != crc) {
-                dataBlockNum++;
+                dataSector++;
             }
             prevCrc = crc;
 
             // copy the block number and crc to the table
-            memcpy(discInfo->table + ((blockNum + 1) * 8), &dataBlockNum, 4);
-            memcpy(discInfo->table + ((blockNum + 1) * 8) + 4, &crc, 4);
+            memcpy(discInfo->table + ((sector + 1) * 8), &dataSector, 4);
+            memcpy(discInfo->table + ((sector + 1) * 8) + 4, &crc, 4);
         }
-        blockNum++;
+        sector++;
     }
     fclose(f);
 
-    if (blockNum == WII_DL_BLOCK_NUM) {
+    if (sector == WII_DL_SECTOR_NUM) {
         discInfo->isDualLayer = true;
     }
 
     // set the disc type
-    if (discInfo->isWII && discInfo->isDualLayer) {
+    if (discInfo->isWII && discInfo->isDualLayer && sector == WII_DL_SECTOR_NUM) {
+        memset(discInfo->table + 6, WII_DL_SECTOR_PT, 1);
         memset(discInfo->table + 7, WII_DL_DISC, 1);
-    } else if(discInfo->isWII) {
+    } else if(discInfo->isWII && sector == WII_SECTOR_NUM) {
+        memset(discInfo->table + 6, WII_DL_SECTOR_PT, 1);
         memset(discInfo->table + 7, WII_DISC, 1);
-    } else if(discInfo->isGC) {
+    } else if(discInfo->isGC && sector == GC_SECTOR_NUM) {
+        memset(discInfo->table + 6, GC_SECTOR_PT, 1);
         memset(discInfo->table + 7, GC_DISC, 1);
+    } else {
+        fprintf(stderr, "ERROR: bad number of sectors read\n");
     }
 
     return discInfo;
 }
 
-/**
- * Get the disc info from the first block of data
- *
- * If this is a shrunken image call this function twice
- * with the first and second block
- */
-void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
+void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
 {
-	// check for the shrunken magic word
     bool isShrunken = memcmp(SHRUNKEN_MAGIC_WORD, data, 5) == 0;
 
-    // if this is a shrunken disc image the first block
-    // is the partition table and the second block has all the
-    // disc info
     if (isShrunken) {
 
-        // create a partition table using the data
-        discInfo->table = calloc(1, BLOCK_SIZE);
-        memcpy(discInfo->table, data, BLOCK_SIZE);
-        discInfo->isShrunken = true;
+        discInfo->isShrunken = isShrunken;
 
         // for shrunken images the disc type is at byte 7
         switch(data[7]) {
             case 0x01: // GC_DISC
                 discInfo->isGC = true;
+                discInfo->tableSectors = GC_SECTOR_PT;
                 break;
             case 0x10: // WII_DISC
                 discInfo->isWII = true;
+                discInfo->tableSectors = WII_SECTOR_PT;
                 break;
             case 0x11: // WII_DL_DISC
                 discInfo->isWII = true;
                 discInfo->isDualLayer = true;
+                discInfo->tableSectors = WII_DL_SECTOR_PT;
                 break;
         }
 
-    } else {
-    	// the disc id comes from bytes 0 through 5
+        discInfo->table = calloc(1, (SECTOR_SIZE * discInfo->tableSectors));
+    } 
+
+    // if this is a shrunken image and the sector is part of the partition table
+    // write it to the table
+    else if (discInfo->isShrunken && sector < discInfo->tableSectors) {
+        memcpy(discInfo->table, data + (sector * SECTOR_SIZE), SECTOR_SIZE);
+    } 
+
+    // the actual disk info is either in the first sector of a regular image
+    // or the sector after the partition table in a shrunken image
+    else if (sector == 0 || sector == discInfo->tableSectors) {
+
+        // the disc id comes from bytes 0 through 5
         discInfo->discId = calloc(1, 7);
         memcpy(discInfo->discId, data, 6);
-        
+            
         // the disc number comes from byte 6
         discInfo->discNumber = data[6];
 
@@ -152,11 +166,15 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[])
         }
 
         if (discInfo->table == NULL) {
-            // create a partition table
-            discInfo->table = calloc(1, BLOCK_SIZE);
-
+            // create a partition table of the max size
+            if (discInfo->isGC) {
+                discInfo->table = calloc(1, GC_SECTOR_NUM);
+            }
+            if (discInfo->isWII) {
+                discInfo->table = calloc(1, WII_DL_SECTOR_NUM);
+            }
             // write the shrunken magic word to the partition table
-            memcpy(discInfo->table, SHRUNKEN_MAGIC_WORD, 5);
+            memcpy(discInfo->table, SHRUNKEN_MAGIC_WORD, 6);
         }
     }
 }
@@ -185,18 +203,18 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     int dataCount = 0;
     int generatedJunkCount = 0;
     int repeatJunkCount = 0;
-    int repeatBlock = 0;
+    int repeatSector = 0;
     
-    int blockNum;
-    for(blockNum = 1; blockNum < BLOCK_SIZE; blockNum++) {
+    int sector;
+    for(sector = 1; sector < WII_DL_SECTOR_NUM; sector++) {
         
         // if 8 00s we are at the end of the disc
-        if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 8) == 0) {
+        if (memcmp(&ZEROs, discInfo->table + (sector * 8), 8) == 0) {
             break;
         }
 
         // if you see FF address this is a junk block
-        else if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
+        else if (memcmp(&FFs, discInfo->table + (sector * 8), 4) == 0) {
             if (dataCount > 0){
                 fprintf(stderr, "%05d blocks of data\n", dataCount);
                 dataCount = 0;
@@ -209,7 +227,7 @@ void printDiscInfo(struct DiscInfo * discInfo) {
         }
 
         // if you see 00 address this is a repeat block
-        else if (memcmp(&ZEROs, discInfo->table + (blockNum * 8), 4) == 0) {
+        else if (memcmp(&ZEROs, discInfo->table + (sector * 8), 4) == 0) {
             if (generatedJunkCount > 0) {
                 fprintf(stderr, "%05d blocks of junk\n", generatedJunkCount);
                 generatedJunkCount = 0;
@@ -233,10 +251,10 @@ void printDiscInfo(struct DiscInfo * discInfo) {
             }
 
             // see if we are a repeated data block
-            if (memcmp(&prevCrc, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
-                repeatBlock++;
+            if (memcmp(&prevCrc, discInfo->table + (sector * 8) + 4, 4) == 0) {
+                repeatSector++;
             }
-            memcpy(&prevCrc, discInfo->table + (blockNum * 8) + 4, 4);
+            memcpy(&prevCrc, discInfo->table + (sector * 8) + 4, 4);
 
             dataCount++;
         }
@@ -250,9 +268,9 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     if (repeatJunkCount > 0) {
         fprintf(stderr, "%05d blocks of repeat junk\n", repeatJunkCount);
     }
-    if (repeatBlock > 0) {
-        fprintf(stderr, "%05d BLOCKS REPEATED\n", repeatBlock);
+    if (repeatSector > 0) {
+        fprintf(stderr, "%05d BLOCKS REPEATED\n", repeatSector);
     }
 
-    fprintf(stderr, "%05d TOTAL BLOCKS\n", blockNum - 1);
+    fprintf(stderr, "%05d TOTAL SECTORS\n", sector - 1);
 }

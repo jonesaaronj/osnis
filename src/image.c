@@ -18,16 +18,16 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     FILE *outputF = (outputFile != NULL) ? fopen(outputFile, "wb") : stdout;
 
     // Do all of our reading in 0x40000 byte blocks
-    unsigned char * buffer = calloc(1, BLOCK_SIZE);
+    unsigned char * buffer = calloc(1, SECTOR_SIZE);
 
     struct DiscInfo *discInfo = calloc(sizeof(struct DiscInfo), 1);
 
-    // in a shrunken image the first block is always the partition table
+    // in a shrunken image the first x blocks is always the partition table
     if (fread(buffer, 1, BLOCK_SIZE, inputF) != BLOCK_SIZE){
         fprintf(stderr, "UNSHRINK ERROR: could not read partition table\n");
         return;
     }
-    getDiscInfo(discInfo, buffer);
+    getDiscInfo(discInfo, buffer, 0);
 
     // the first block of data always exists
     if (fread(buffer, 1, BLOCK_SIZE, inputF) != BLOCK_SIZE){
@@ -38,20 +38,17 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         fprintf(stderr, "UNSHRINK ERROR: could not write first block\n");
         return;
     }
-    getDiscInfo(discInfo, buffer);
+    getDiscInfo(discInfo, buffer, 0);
     printDiscInfo(discInfo);
 
     size_t discBlockNum = 0;
     size_t lastBlockSize = 0;
     if (discInfo->isWII && discInfo->isDualLayer) {
-        discBlockNum = WII_DL_BLOCK_NUM;
-        lastBlockSize = WII_DL_LAST_BLOCK_SIZE;
+        discBlockNum = WII_DL_SECTOR_NUM;
     } else if(discInfo->isWII) {
-        discBlockNum = WII_BLOCK_NUM;
-        lastBlockSize = WII_LAST_BLOCK_SIZE;
+        discBlockNum = WII_SECTOR_NUM;
     } else if(discInfo->isGC) {
-        discBlockNum = GC_BLOCK_NUM;
-        lastBlockSize = GC_LAST_BLOCK_SIZE;
+        discBlockNum = GC_SECTOR_NUM;
     }
 
     // fprintf(stderr, "discBlockNum: %zu\n", discBlockNum);
@@ -145,62 +142,57 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
     // if file pointer is empty read from stdout
     FILE *outputF = (outputFile != NULL) ? fopen(outputFile, "wb") : stdout;
 
-    // Do all of our reading in 0x40000 byte blocks
-    unsigned char * buffer = calloc(1, BLOCK_SIZE);
+    // Do all of our reading in blocks the size of our sector
+    unsigned char * buffer = calloc(1, SECTOR_SIZE);
     unsigned char * repeatByte;
     
     // write partition block
-    if (fwrite(discInfo->table, BLOCK_SIZE, 1, outputF) != 1) {
+    if (fwrite(discInfo->table, (discInfo->tableSectors * SECTOR_SIZE), 1, outputF) != 1) {
         fprintf(stderr, "SHRINK ERROR: could not write partition table\n");
         return;
     }
 
-    size_t discBlockNum = 0;
-    size_t lastBlockSize = 0;
+    size_t sectors = 0;
     if (discInfo->isWII && discInfo->isDualLayer) {
-        discBlockNum = WII_DL_BLOCK_NUM;
-        lastBlockSize = WII_DL_LAST_BLOCK_SIZE;
+        sectors = WII_DL_SECTOR_NUM;
     } else if(discInfo->isWII) {
-        discBlockNum = WII_BLOCK_NUM;
-        lastBlockSize = WII_LAST_BLOCK_SIZE;
+        sectors = WII_SECTOR_NUM;
     } else if(discInfo->isGC) {
-        discBlockNum = GC_BLOCK_NUM;
-        lastBlockSize = GC_LAST_BLOCK_SIZE;
+        sectors = GC_SECTOR_NUM;
     }
 
     // fprintf(stderr, "discBlockNum: %zu\n", discBlockNum);
     // fprintf(stderr, "lastBlockSize: %zx\n", lastBlockSize);
 
+    unsigned char * junk;
     uint32_t prevCrc = 0;
-    uint32_t dataBlockNum = 0;
-    size_t blockNum = 0;
+    uint32_t dataSector = 0;
+    size_t sector = 0;
     size_t read;
-    while((read = fread(buffer, 1, BLOCK_SIZE, inputF)) > 0) {
+    while((read = fread(buffer, 1, SECTOR_SIZE, inputF)) > 0) {
 
-        // set the block size to write
-        size_t writeSize = (blockNum < discBlockNum - 1) ? BLOCK_SIZE : lastBlockSize;
-
-        if (read != writeSize) {
-            fprintf(stderr, "SHRINK ERROR: %zd of %zd\n", blockNum, discBlockNum);
-            fprintf(stderr, "SHRINK ERROR: read %zx != write %zx\n", read, writeSize);
+        if (read != SECTOR_SIZE) {
+            fprintf(stderr, "SHRINK ERROR: %zd of %zd\n", sector, sectors);
         }
 
         // get the junk block
-        unsigned char * junk = getJunkBlock(blockNum, discInfo->discId, discInfo->discNumber);
+        if (sector % JUNK_SECTOR_SIZE == 0) {
+            junk = getJunkBlock(sector / JUNK_SECTOR_SIZE, discInfo->discId, discInfo->discNumber);
+        }
 
         // get the crc32 of the data block
         uint32_t crc = crc32(buffer, read, 0);
 
         // if this is a junk block skip writing it
-        if (isSame(buffer, junk, read)) {
-            if (memcmp(&FFs, discInfo->table + ((blockNum + 1) * 8), 4) != 0) {
-                fprintf(stderr, "SHRINK ERROR: Saw a junk block at %zu but expected something else\n", blockNum);
+        if (memcmp(buffer, junk, read) == 0) {
+            if (memcmp(&FFs, discInfo->table + ((sector + 1) * 8), 4) != 0) {
+                fprintf(stderr, "SHRINK ERROR: Saw a junk block at %zu but expected something else\n", sector);
                 break;
             }
-            if (memcmp(&crc, discInfo->table + ((blockNum + 1) * 8) + 4, 4) != 0) {
+            if (memcmp(&crc, discInfo->table + ((sector + 1) * 8) + 4, 4) != 0) {
                 uint32_t tableCrc;
-                memcpy(&tableCrc, discInfo->table + ((blockNum + 1) * 8) + 4, 4);
-                fprintf(stderr, "SHRINK ERROR: junk crc error at %lu\n", blockNum);
+                memcpy(&tableCrc, discInfo->table + ((sector + 1) * 8) + 4, 4);
+                fprintf(stderr, "SHRINK ERROR: junk crc error at %lu\n", sector);
                 fprintf(stderr, "SHRINK ERROR: Block crc was %x but table crc was %x\n", crc, tableCrc);
                 break;
             }
@@ -208,12 +200,12 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
 
         // if this is a repeated block just check that the partition table is correct and don't write it
         else if((repeatByte = isUniform(buffer, read)) != NULL) {
-            if (memcmp(&FEs, discInfo->table + ((blockNum + 1) * 8), 4) != 0) {
-                fprintf(stderr, "SHRINK ERROR: Saw a repeat block at %zu but expected something else\n", blockNum);
+            if (memcmp(&FEs, discInfo->table + ((sector + 1) * 8), 4) != 0) {
+                fprintf(stderr, "SHRINK ERROR: Saw a repeat block at %zu but expected something else\n", sector);
                 break;
             }
-            if (memcmp(repeatByte, discInfo->table + ((blockNum + 1) * 8) + 7, 1) != 0) {
-                fprintf(stderr, "SHRINK ERROR: Saw a repeat block at %zu but the repeat byte was wrong\n", blockNum);
+            if (memcmp(repeatByte, discInfo->table + ((sector + 1) * 8) + 7, 1) != 0) {
+                fprintf(stderr, "SHRINK ERROR: Saw a repeat block at %zu but the repeat byte was wrong\n", sector);
                 break;
             }
         }
@@ -222,32 +214,32 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
         // make sure our table has the correct address and crc
         else {
             if (prevCrc != crc) {
-                dataBlockNum++;
+                dataSector++;
             }
-            if (memcmp(&dataBlockNum, discInfo->table + ((blockNum + 1) * 8), 4) != 0) {
+            if (memcmp(&dataSector, discInfo->table + ((sector + 1) * 8), 4) != 0) {
                 uint32_t address;
-                memcpy(&address, discInfo->table + ((blockNum + 1) * 8), 4);
-                fprintf(stderr, "SHRINK ERROR: Saw a data block but address was wrong at %zu\n", blockNum);
-                fprintf(stderr, "SHRINK ERROR: expected %u but %u is in the table\n", dataBlockNum, address);
+                memcpy(&address, discInfo->table + ((sector + 1) * 8), 4);
+                fprintf(stderr, "SHRINK ERROR: Saw a data block but address was wrong at %zu\n", sector);
+                fprintf(stderr, "SHRINK ERROR: expected %u but %u is in the table\n", dataSector, address);
                 break;
             }
-            if (memcmp(&crc, discInfo->table + ((blockNum + 1) * 8) + 4, 4) != 0) {
+            if (memcmp(&crc, discInfo->table + ((sector + 1) * 8) + 4, 4) != 0) {
                 uint32_t tableCrc;
-                memcpy(&tableCrc, discInfo->table + ((blockNum + 1) * 8) + 4, 4);
-                fprintf(stderr, "SHRINK ERROR: data crc error at %lu\n", blockNum);
+                memcpy(&tableCrc, discInfo->table + ((sector + 1) * 8) + 4, 4);
+                fprintf(stderr, "SHRINK ERROR: data crc error at %lu\n", sector);
                 fprintf(stderr, "SHRINK ERROR: Block crc was %x but table crc was %x\n", crc, tableCrc);
                 break;
             }
             // only write the block if this was not a repeat block
             if (prevCrc != crc) {
-                if (fwrite(buffer, 1, writeSize, outputF) != read) {
-                    fprintf(stderr, "SHRINK ERROR: could not write data block %zu at %d\n", blockNum, dataBlockNum);
+                if (fwrite(buffer, 1, read, outputF) != read) {
+                    fprintf(stderr, "SHRINK ERROR: could not write data block %zu at %d\n", sector, dataSector);
                     break;
                 }
             }
             prevCrc = crc;
         }
-        blockNum++;
+        sector++;
     }
     fclose(inputF);
     fclose(outputF);

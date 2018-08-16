@@ -4,27 +4,32 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-// Once a stable version is achieved the version number will change to 1
+#define SECTOR_SIZE 0x8000
+
+// 00-07 'O','S','N','I','S',0xXX,0xYY,0xZZ
+// 0xXX is a version number, I'm starting at 0 for development and when there is a viable working algorithm I'll up it to 1
+// 0xYY is image type where 0x01 = GC, 0x10 = WII, and 0x11 is a Dual Layer WII
+// 0xZZ is the number of sectors of the partition table
 static const unsigned char SHRUNKEN_MAGIC_WORD[8] = {'O','S','N','I','S',0x00,0x00,0x00};
+
+static const unsigned char GC_MAGIC_WORD[] = {0xC2, 0x33, 0x9F, 0x3D};
+static const unsigned char WII_MAGIC_WORD[] = {0x5D, 0x1C, 0x9E, 0xA3};
 
 static const uint64_t FFs = 0xFFFFFFFFFFFFFFFF;
 static const uint64_t FEs = 0xFEFEFEFEFEFEFEFE;
 static const uint64_t ZEROs = 0x0;
 
 static const unsigned char GC_DISC = 0x01;
+static const unsigned char GC_SECTOR_PT = 11;
+static const size_t GC_SECTOR_NUM = 44555;
+
 static const unsigned char WII_DISC = 0x10;
+static const unsigned char WII_SECTOR_PT = 36;
+static const size_t WII_SECTOR_NUM = 143432;
+
 static const unsigned char WII_DL_DISC = 0x11;
-
-static const size_t GC_LAST_BLOCK_SIZE = 0x18000;
-static const size_t WII_LAST_BLOCK_SIZE = 0x40000;
-static const size_t WII_DL_LAST_BLOCK_SIZE = 0x20000;
-
-static const size_t GC_BLOCK_NUM = 5570;
-static const size_t WII_BLOCK_NUM = 17929;
-static const size_t WII_DL_BLOCK_NUM = 32468;
-
-static const unsigned char GC_MAGIC_WORD[] = {0xC2, 0x33, 0x9F, 0x3D};
-static const unsigned char WII_MAGIC_WORD[] = {0x5D, 0x1C, 0x9E, 0xA3};
+static const unsigned char WII_DL_SECTOR_PT = 64;
+static const size_t WII_DL_SECTOR_NUM = 259740;
 
 struct DiscInfo
 {
@@ -32,6 +37,7 @@ struct DiscInfo
     unsigned char discNumber;
     unsigned char * discName;
     unsigned char * table;
+    unsigned char tableSectors;
     bool isGC;
     bool isWII;
     bool isDualLayer;
@@ -49,7 +55,7 @@ struct DiscInfo * profileImage(char *file);
  * If this is a shrunken image call this function twice
  * with the first and second block to fill the disc info
  */
-void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[]);
+void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector);
 
 /**
  * Print out the disc info
