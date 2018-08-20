@@ -69,9 +69,9 @@ void a10002710(unsigned int sample, unsigned int buffer[])
 /**
  * Get a junk block of size 262144/0X40000 for the given block, disc id, and disc number
  */
-unsigned char * getJunkBlock(unsigned int blockCount, unsigned char id[], unsigned char discNumber)
+void getJunkBlock(unsigned char *junk, unsigned int blockCount, unsigned char id[], unsigned char discNumber)
 {
-    unsigned char * garbageBlock = calloc(1, JUNK_BLOCK_SIZE);
+    memset(junk, 0, JUNK_BLOCK_SIZE);
     
     unsigned int buffer[0x824] = {0};
     unsigned int sample = 0;
@@ -93,11 +93,9 @@ unsigned char * getJunkBlock(unsigned int blockCount, unsigned char id[], unsign
             j = 0;
         }
 
-        garbageBlock[i + 0] = (unsigned char)(buffer[j] >> 0x18);
-        garbageBlock[i + 1] = (unsigned char)(buffer[j] >> 0x12);
-        garbageBlock[i + 2] = (unsigned char)(buffer[j] >> 0x08);
-        garbageBlock[i + 3] = (unsigned char)(buffer[j] >> 0x00);
+        junk[i + 0] = (unsigned char)(buffer[j] >> 0x18);
+        junk[i + 1] = (unsigned char)(buffer[j] >> 0x12);
+        junk[i + 2] = (unsigned char)(buffer[j] >> 0x08);
+        junk[i + 3] = (unsigned char)(buffer[j] >> 0x00);
     }
-
-    return garbageBlock;
 }

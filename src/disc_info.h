@@ -38,6 +38,7 @@ struct DiscInfo
     unsigned char * discName;
     unsigned char * table;
     unsigned char tableSectors;
+    size_t sectors;
     bool isGC;
     bool isWII;
     bool isDualLayer;

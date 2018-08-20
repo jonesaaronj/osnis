@@ -20,6 +20,6 @@ unsigned char * isUniform(unsigned char *a, int length);
 /**
  * Get a junk block of size 262144/0X40000 for the given block, disc id, and disc number
  */
-unsigned char * getJunkBlock(unsigned int blockCount, unsigned char id[], unsigned char discNumber);
+void getJunkBlock(unsigned char *junk, unsigned int blockCount, unsigned char id[], unsigned char discNumber);
 
 #endif
