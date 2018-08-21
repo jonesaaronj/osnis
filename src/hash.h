@@ -3,9 +3,10 @@
 
 #include <stdbool.h>
 
-#define BLOCK_SIZE 0x1
 #define JUNK_BLOCK_SIZE 0x40000
 #define JUNK_SECTOR_SIZE 0x8
+
+double compare(unsigned char *a, unsigned char *b, int length);
 
 /**
  * Print out the unsigned character array to the given length in hex format

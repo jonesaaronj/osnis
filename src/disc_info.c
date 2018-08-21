@@ -131,6 +131,8 @@ struct DiscInfo * profileImage(char *file)
         // junk blocks get created at a block size of 0x40000
         // if (sector % JUNK_SECTOR_SIZE == 0) {
         getJunkBlock(junk, sector / JUNK_SECTOR_SIZE, discInfo->discId, discInfo->discNumber);
+        double same = compare(buffer, junk + ((sector % JUNK_SECTOR_SIZE) * SECTOR_SIZE), SECTOR_SIZE);
+        if (0 < same && same < 1) fprintf(stderr, "%ld SAME: %f\n", sector, same);
         //}
 
         // check if this is a junk block

@@ -4,13 +4,24 @@
 #include <string.h>
 #include "hash.h"
 
+double compare(unsigned char *a, unsigned char *b, int length)
+{
+    int same = 0;
+    for (int i=0; i < length; i++) {
+        if (a[i] == b[i]) {
+            same++;
+        }
+    }
+    return same/length;
+}
+
 /**
  * Print out the unsigned character array to the given length in hex format
  */
 void printChar(unsigned char *a, int length)
 {
     for (int i = 0; i < length; i++) {
-        fprintf(stderr, "%x", a[i]);
+        fprintf(stderr, "%02x", a[i]);
     }
 }
 
