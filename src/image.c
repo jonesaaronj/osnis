@@ -17,77 +17,52 @@ void unshrinkImage(char *inputFile, char *outputFile) {
     // if file pointer is empty write to stdout
     FILE *outputF = (outputFile != NULL) ? fopen(outputFile, "wb") : stdout;
 
-    // Do all of our reading in 0x40000 byte blocks
     unsigned char * buffer = calloc(1, SECTOR_SIZE);
 
     struct DiscInfo *discInfo = calloc(sizeof(struct DiscInfo), 1);
+    size_t sector = 0;
+    do {
+        // in a shrunken image the first x blocks is always the partition table
+        if (fread(buffer, SECTOR_SIZE, 1, inputF) != 1){
+            fprintf(stderr, "UNSHRINK ERROR: could not read partition table\n");
+            return;
+        }
+        getDiscInfo(discInfo, buffer, sector++);
+    } while (sector <= discInfo->tableSectors);
 
-    // in a shrunken image the first x blocks is always the partition table
-    if (fread(buffer, 1, BLOCK_SIZE, inputF) != BLOCK_SIZE){
-        fprintf(stderr, "UNSHRINK ERROR: could not read partition table\n");
-        return;
-    }
-    getDiscInfo(discInfo, buffer, 0);
-
-    // the first block of data always exists
-    if (fread(buffer, 1, BLOCK_SIZE, inputF) != BLOCK_SIZE){
-        fprintf(stderr, "UNSHRINK ERROR: could not read first block\n");
-        return;
-    }
-    if (fwrite(buffer, 1, BLOCK_SIZE, outputF) != BLOCK_SIZE) {
-        fprintf(stderr, "UNSHRINK ERROR: could not write first block\n");
-        return;
-    }
-    getDiscInfo(discInfo, buffer, 0);
     printDiscInfo(discInfo);
-
-    size_t discBlockNum = 0;
-    size_t lastBlockSize = 0;
-    if (discInfo->isWII && discInfo->isDualLayer) {
-        discBlockNum = WII_DL_SECTOR_NUM;
-    } else if(discInfo->isWII) {
-        discBlockNum = WII_SECTOR_NUM;
-    } else if(discInfo->isGC) {
-        discBlockNum = GC_SECTOR_NUM;
-    }
-
-    // fprintf(stderr, "discBlockNum: %zu\n", discBlockNum);
-    // fprintf(stderr, "lastBlockSize: %zx\n", lastBlockSize);
 
     unsigned char * junk = calloc(1, JUNK_BLOCK_SIZE);
     uint32_t lastAddr = 0;
     size_t read = 0;
-    for(int blockNum = 2; blockNum <= discBlockNum; blockNum++) {
-        
-        // set the block size to write
-        size_t writeSize = (blockNum < discBlockNum) ? BLOCK_SIZE : lastBlockSize;
+    for(size_t sector = 0; sector < discInfo->sectors; sector++) {
 
         // if FFs we are a junk block
-        if (memcmp(&FFs, discInfo->table + (blockNum * 8), 4) == 0) {
+        if (memcmp(&FFs, discInfo->table + ((sector + 1) * 8), 4) == 0) {
             // get the junk block and write it
-            getJunkBlock(junk, blockNum - 1, discInfo->discId, discInfo->discNumber);
+            getJunkBlock(junk, sector / JUNK_SECTOR_SIZE, discInfo->discId, discInfo->discNumber);
             // check the crc32 of the junk block and write if everthing is fine
-            uint32_t crc = crc32(junk, writeSize, 0);
-            if (memcmp(&crc, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
-                if (fwrite(junk, writeSize, 1, outputF) != 1) {
-                    fprintf(stderr, "UNSHRINK ERROR: could not write block %d\n", blockNum);
+            uint32_t crc = crc32(junk + ((sector % JUNK_SECTOR_SIZE) * SECTOR_SIZE), SECTOR_SIZE, 0);
+            if (memcmp(&crc, discInfo->table + ((sector + 1) * 8) + 4, 4) == 0) {
+                if (fwrite(junk + ((sector % JUNK_SECTOR_SIZE) * SECTOR_SIZE), SECTOR_SIZE, 1, outputF) != 1) {
+                    fprintf(stderr, "UNSHRINK ERROR: could not write sector %ld\n", sector);
                     break;
                 }
             } else {
                 uint32_t tableCrc;
-                memcpy(&tableCrc, discInfo->table + ((blockNum) * 8) + 4, 4);
-                fprintf(stderr, "UNSHRINK ERROR: junk crc error at %d\n", blockNum);
+                memcpy(&tableCrc, discInfo->table + ((sector + 1) * 8) + 4, 4);
+                fprintf(stderr, "UNSHRINK ERROR: junk crc error at %ld\n", sector);
                 fprintf(stderr, "UNSHRINK ERROR: Block crc was %x but table crc was %x\n", crc, tableCrc);
                 break;
             }
         }
 
         // if FEs we are a repeat junk block
-        else if (memcmp(&FEs, discInfo->table + (blockNum * 8), 4) == 0) {
-            unsigned char repeatByte = discInfo->table[((blockNum) * 8) + 7];
-            unsigned char repeat[BLOCK_SIZE] = {repeatByte};
-            if (fwrite(repeat, writeSize, 1, outputF) != 1) {
-                fprintf(stderr, "UNSHRINK ERROR: could not write block %d\n", blockNum);
+        else if (memcmp(&FEs, discInfo->table + ((sector + 1) * 8), 4) == 0) {
+            unsigned char repeatByte = discInfo->table[((sector + 1) * 8) + 7];
+            unsigned char repeat[SECTOR_SIZE] = {repeatByte};
+            if (fwrite(repeat, SECTOR_SIZE, 1, outputF) != 1) {
+                fprintf(stderr, "UNSHRINK ERROR: could not write sector %ld\n", sector);
                 break;
             }
         }
@@ -95,30 +70,25 @@ void unshrinkImage(char *inputFile, char *outputFile) {
         // otherwise we are a data block
         else {
             // only read a new block in if we are not a repeat bock
-            if (memcmp(&lastAddr, discInfo->table + (blockNum * 8), 4) != 0) {
-                if ((read = fread(buffer, 1, writeSize, inputF)) != writeSize){
-                    fprintf(stderr, "UNSHRINK ERROR: could not read block %d\n", blockNum);
+            if (memcmp(&lastAddr, discInfo->table + ((sector + 1) * 8), 4) != 0) {
+                if ((read = fread(buffer, 1, SECTOR_SIZE, inputF)) != SECTOR_SIZE){
+                    fprintf(stderr, "UNSHRINK ERROR: could not read sector %ld\n", sector);
                     return;
                 }
-                if (read != writeSize) {
-                    fprintf(stderr, "UNSHRINK ERROR: %d of %zd\n", blockNum, discBlockNum);
-                    fprintf(stderr, "UNSHRINK ERROR: read %zx != write %zx\n", read, writeSize);
-                    break;
-                }
             }
-            memcpy(&lastAddr, discInfo->table + (blockNum * 8), 4);
+            memcpy(&lastAddr, discInfo->table + ((sector + 1) * 8), 4);
             
             // check the crc32 of the data block and write if everthing is fine
-            uint32_t crc = crc32(buffer, writeSize, 0);
-            if (memcmp(&crc, discInfo->table + (blockNum * 8) + 4, 4) == 0) {
-                if (fwrite(buffer, writeSize, 1, outputF) != 1) {
-                    fprintf(stderr, "UNSHRINK ERROR: could not write block %d\n", blockNum);
+            uint32_t crc = crc32(buffer, SECTOR_SIZE, 0);
+            if (memcmp(&crc, discInfo->table + ((sector + 1) * 8) + 4, 4) == 0) {
+                if (fwrite(buffer, SECTOR_SIZE, 1, outputF) != 1) {
+                    fprintf(stderr, "UNSHRINK ERROR: could not write sector %ld\n", sector);
                     break;
                 }
             } else {
                 uint32_t tableCrc;
-                memcpy(&tableCrc, discInfo->table + (blockNum * 8) + 4, 4);
-                fprintf(stderr, "UNSHRINK ERROR: data crc error at %d\n", blockNum);
+                memcpy(&tableCrc, discInfo->table + ((sector + 1) * 8) + 4, 4);
+                fprintf(stderr, "UNSHRINK ERROR: data crc error at %ld\n", sector);
                 fprintf(stderr, "UNSHRINK ERROR: Block crc was %x but table crc was %x\n", crc, tableCrc);
                 break;
             }
@@ -156,7 +126,7 @@ void shrinkImage(struct DiscInfo * discInfo, char *inputFile, char *outputFile) 
     unsigned char * junk = calloc(1, JUNK_BLOCK_SIZE);
     unsigned char * repeatByte;
     uint32_t prevCrc = 0;
-    uint32_t dataSector = 0;
+    uint32_t dataSector = -1;
     size_t sector = 0;
     size_t read;
     while((read = fread(buffer, 1, SECTOR_SIZE, inputF)) > 0) {

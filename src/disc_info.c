@@ -15,7 +15,7 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
     if (sector == 0 && discInfo->isShrunken) {
 
         // for shrunken images the disc type is at byte 7
-        switch(data[6]) {
+        switch(data[7]) {
             case 0x01: // GC_DISC
                 discInfo->isGC = true;
                 discInfo->sectors = GC_SECTOR_NUM;
@@ -31,16 +31,16 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
                 break;
         }
 
-        discInfo->tableSectors = data[7];
+        discInfo->tableSectors = data[6];
 
         discInfo->table = calloc(1, (SECTOR_SIZE * discInfo->tableSectors));
-        memcpy(discInfo->table, data + (sector * SECTOR_SIZE), SECTOR_SIZE);
-    } 
+        memcpy(discInfo->table, data, SECTOR_SIZE);
+    }
 
     // if this is a shrunken image and the sector is part of the partition table
     // write it to the table
     else if (discInfo->isShrunken && 0 < sector && sector < discInfo->tableSectors) {
-        memcpy(discInfo->table, data + (sector * SECTOR_SIZE), SECTOR_SIZE);
+        memcpy(discInfo->table + (sector * SECTOR_SIZE), data, SECTOR_SIZE);
     } 
 
     // the actual disk info is either in the first sector of a regular image
@@ -99,15 +99,18 @@ struct DiscInfo * profileImage(char *file)
     unsigned char * junk = calloc(1, JUNK_BLOCK_SIZE);
     unsigned char * repeatByte;
     uint32_t prevCrc = 0;
-    uint32_t dataSector = 0;
+    uint32_t dataSector = -1;
     size_t sector = 0;
     size_t read;
-    while((read = fread(buffer, 1, SECTOR_SIZE, f)) > 0) {
+    while((read = fread(buffer, 1, SECTOR_SIZE, f)) == SECTOR_SIZE) {
 
         // get the disc info from the first block
         if (sector == 0) {
-            getDiscInfo(discInfo, buffer, sector++);
-            continue;
+            getDiscInfo(discInfo, buffer, sector);
+            if (discInfo->isShrunken) {
+                sector++;
+                continue;
+            }
         }
 
         // if the first block has the shrunken magic word this 
@@ -115,7 +118,8 @@ struct DiscInfo * profileImage(char *file)
         // table and the disc info will be in the next few sectors
         else if (discInfo->isShrunken) {
             if (sector <= discInfo->tableSectors) {
-                getDiscInfo(discInfo, buffer, sector++);
+                getDiscInfo(discInfo, buffer, sector);
+                sector++;
                 continue;
             } else {
                 return discInfo;
@@ -132,18 +136,18 @@ struct DiscInfo * profileImage(char *file)
         // check if this is a junk block
         if (memcmp(buffer, junk + ((sector % JUNK_SECTOR_SIZE) * SECTOR_SIZE), read) == 0) {
             // Write ffs to the partition table for the address
-            memcpy(discInfo->table + (sector * 8), &FFs, 4);
+            memcpy(discInfo->table + ((sector + 1) * 8), &FFs, 4);
 
             // get the crc of the junk block and copy it to the table
             uint32_t crc = crc32(junk + ((sector % JUNK_SECTOR_SIZE) * SECTOR_SIZE), read, 0);
-            memcpy(discInfo->table + (sector * 8) + 4, &crc, 4);
+            memcpy(discInfo->table + ((sector + 1) * 8) + 4, &crc, 4);
         }
 
         // check if this is a block of repeated junk byte
         else if((repeatByte = isUniform(buffer, read)) != NULL) {
             // write our repeated byte to the partition table
-            memcpy(discInfo->table + (sector * 8), &FEs, 4);
-            memcpy(discInfo->table + (sector * 8) + 7, repeatByte, 1);
+            memcpy(discInfo->table + ((sector + 1) * 8), &FEs, 4);
+            memcpy(discInfo->table + ((sector + 1) * 8) + 7, repeatByte, 1);
         }
 
         // If this is not a junk block then it is a data block
@@ -158,8 +162,8 @@ struct DiscInfo * profileImage(char *file)
             prevCrc = crc;
 
             // copy the block number and crc to the table
-            memcpy(discInfo->table + (sector * 8), &dataSector, 4);
-            memcpy(discInfo->table + (sector * 8) + 4, &crc, 4);
+            memcpy(discInfo->table + ((sector + 1) * 8), &dataSector, 4);
+            memcpy(discInfo->table + ((sector + 1) * 8) + 4, &crc, 4);
         }
         sector++;
     }
@@ -226,7 +230,7 @@ void printDiscInfo(struct DiscInfo * discInfo) {
         // if 8 00s we are at the end of the disc
         if (memcmp(&ZEROs, discInfo->table + (sector * 8), 8) == 0) {
             fprintf(stderr, "Shouldn't ever get here\n");
-            //break;
+            break;
         }
 
         // if you see FF address this is a junk block
