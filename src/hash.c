@@ -4,7 +4,7 @@
 #include <string.h>
 #include "hash.h"
 
-double compare(unsigned char *a, unsigned char *b, int length)
+int compare(unsigned char *a, unsigned char *b, int length)
 {
     int same = 0;
     for (int i=0; i < length; i++) {
@@ -12,7 +12,7 @@ double compare(unsigned char *a, unsigned char *b, int length)
             same++;
         }
     }
-    return same/length;
+    return same;
 }
 
 /**

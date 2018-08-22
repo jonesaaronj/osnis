@@ -6,7 +6,7 @@
 #define JUNK_BLOCK_SIZE 0x40000
 #define JUNK_SECTOR_SIZE 0x8
 
-double compare(unsigned char *a, unsigned char *b, int length);
+int compare(unsigned char *a, unsigned char *b, int length);
 
 /**
  * Print out the unsigned character array to the given length in hex format
