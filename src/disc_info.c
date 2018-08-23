@@ -102,7 +102,7 @@ struct DiscInfo * profileImage(char *file)
 
     // Do all of our reading in blocks the size of our sector
     unsigned char * buffer = calloc(1, SECTOR_SIZE);
-    // unsigned char * empty = calloc(1, SECTOR_SIZE);
+    unsigned char * empty = calloc(1, SECTOR_SIZE);
     unsigned char * junk = calloc(1, JUNK_BLOCK_SIZE);
     unsigned char * repeatByte;
     uint32_t prevCrc = 0;
@@ -136,12 +136,12 @@ struct DiscInfo * profileImage(char *file)
         // junk blocks get created at a block size of 0x40000
         // if (sector % JUNK_SECTOR_SIZE == 0) {
         getJunkBlock(junk, sector / JUNK_SECTOR_SIZE, discInfo->discId, discInfo->discNumber);
-        //int same = compare(buffer, junk + ((sector % JUNK_SECTOR_SIZE) * SECTOR_SIZE), SECTOR_SIZE);
-        //if (SECTOR_SIZE/10 < same && same < SECTOR_SIZE) fprintf(stderr, "%ld JUNK SAME: %d\n", sector, same);
+        int same = compare(buffer, junk + ((sector % JUNK_SECTOR_SIZE) * SECTOR_SIZE), SECTOR_SIZE);
+        if (SECTOR_SIZE/10 < same && same < SECTOR_SIZE) fprintf(stderr, "%ld JUNK SAME: %d\n", sector, same);
         //fprintf(stderr, "%ld JUNK SAME: %f\n", sector, same);
 
-        //same = compare(buffer, empty, SECTOR_SIZE);
-        //if (SECTOR_SIZE/10 < same && same < SECTOR_SIZE) fprintf(stderr, "%ld EMPTY SAME: %d\n", sector, same);
+        same = compare(buffer, empty, SECTOR_SIZE);
+        if (SECTOR_SIZE/10 < same && same < SECTOR_SIZE) fprintf(stderr, "%ld EMPTY SAME: %d\n", sector, same);
         //fprintf(stderr, "%ld EMPTY SAME: %f\n", sector, same);
         //}
 
