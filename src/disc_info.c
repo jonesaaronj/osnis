@@ -52,10 +52,10 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
         memcpy(discInfo->issuer, data + 0x140, issuerLength);
 
         discInfo->titleKey = calloc(1, 16);
-        memcpy(discInfo->titleKey, data + 0x1bf)
+        memcpy(discInfo->titleKey, data + 0x1bf, 16);
 
         discInfo->iv = calloc(1, 16);
-        memcpy(discInfo->iv, data + 0x1dc)
+        memcpy(discInfo->iv, data + 0x1dc, 16);
     }
 
     // the actual disk info is either in the first sector of a regular image
@@ -241,7 +241,7 @@ void printDiscInfo(struct DiscInfo * discInfo) {
         fprintf(stderr, "Title Key: ");
         printChar(discInfo->titleKey, 16);
         fprintf(stderr, "\n");
-        fprintf(stderr, "IV: ", discInfo->iv);
+        fprintf(stderr, "IV: ");
         printChar(discInfo->iv, 16);
         fprintf(stderr, "\n");
     }
