@@ -44,14 +44,13 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
 
     // if this is not a shrunken image the key issuer will be in sector 0x0A at byte 0x140
     else if (!discInfo->isShrunken && sector == 0x0A) {
-        size_t issuerLength = strlen((const char *) data + 0x140);
-        discInfo->issuer = calloc(1, issuerLength + 1);
-        memcpy(discInfo->discName, data + 0x140, issuerLength);
+        discInfo->issuer = calloc(1, 26 + 1);
+        memcpy(discInfo->discName, data + 0x140, 26);
     }
 
     // the actual disk info is either in the first sector of a regular image
     // or the sector after the partition table in a shrunken image
-    else if (sector == 0 || sector == discInfo->tableSectors) {
+    else if ((!discInfo->isShrunken && sector == 0) || (discInfo->isShrunken && sector == discInfo->tableSectors)) {
 
         // the disc id comes from bytes 0 through 5
         discInfo->discId = calloc(1, 6);
