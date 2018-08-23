@@ -101,8 +101,8 @@ struct DiscInfo * profileImage(char *file)
     struct DiscInfo *discInfo = calloc(sizeof(struct DiscInfo), 1);
 
     // Do all of our reading in blocks the size of our sector
+    // unsigned char * empty = calloc(1, SECTOR_SIZE);
     unsigned char * buffer = calloc(1, SECTOR_SIZE);
-    unsigned char * empty = calloc(1, SECTOR_SIZE);
     unsigned char * junk = calloc(1, JUNK_BLOCK_SIZE);
     unsigned char * repeatByte;
     uint32_t prevCrc = 0;
@@ -136,12 +136,12 @@ struct DiscInfo * profileImage(char *file)
         // junk blocks get created at a block size of 0x40000
         // if (sector % JUNK_SECTOR_SIZE == 0) {
         getJunkBlock(junk, sector / JUNK_SECTOR_SIZE, discInfo->discId, discInfo->discNumber);
-        int same = compare(buffer, junk + ((sector % JUNK_SECTOR_SIZE) * SECTOR_SIZE), SECTOR_SIZE);
-        if (SECTOR_SIZE/10 < same && same < SECTOR_SIZE) fprintf(stderr, "%ld JUNK SAME: %d\n", sector, same);
+        // int same = compare(buffer, junk + ((sector % JUNK_SECTOR_SIZE) * SECTOR_SIZE), SECTOR_SIZE);
+        // if (SECTOR_SIZE/10 < same && same < SECTOR_SIZE) fprintf(stderr, "%ld JUNK SAME: %d\n", sector, same);
         //fprintf(stderr, "%ld JUNK SAME: %f\n", sector, same);
 
-        same = compare(buffer, empty, SECTOR_SIZE);
-        if (SECTOR_SIZE/10 < same && same < SECTOR_SIZE) fprintf(stderr, "%ld EMPTY SAME: %d\n", sector, same);
+        // same = compare(buffer, empty, SECTOR_SIZE);
+        // if (SECTOR_SIZE/10 < same && same < SECTOR_SIZE) fprintf(stderr, "%ld EMPTY SAME: %d\n", sector, same);
         //fprintf(stderr, "%ld EMPTY SAME: %f\n", sector, same);
         //}
 
@@ -226,7 +226,7 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     fprintf(stderr, "Disc Id: %.*s\n", 6, discInfo->discId);
     fprintf(stderr, "Disc Name: %s\n", discInfo->discName);
     fprintf(stderr, "Disc Number: %d\n", discInfo->discNumber);
-    fprintf(stderr, "Disc Issuer: %s\n", discInfo->issuer);
+    if (discInfo->isWII) fprintf(stderr, "Disc Issuer: %s\n", discInfo->issuer);
 
     uint32_t prevCrc = 0;
 
