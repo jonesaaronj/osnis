@@ -48,6 +48,7 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
         size_t issuerLength = strlen((const char *) data + 0x140);
         discInfo->issuer = calloc(1, issuerLength + 1);
         memcpy(discInfo->issuer, data + 0x140, issuerLength);
+        fprintf(stderr, "Issuer %s\n", discInfo->issuer);
     }
 
     // the actual disk info is either in the first sector of a regular image
