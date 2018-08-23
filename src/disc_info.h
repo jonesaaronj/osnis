@@ -41,7 +41,11 @@ struct DiscInfo
     unsigned char * discId;
     unsigned char discNumber;
     unsigned char * discName;
+    
     unsigned char * issuer;
+    unsigned char * titleKey;
+    unsigned char * iv;
+    
     unsigned char * table;
     unsigned char tableSectors;
     size_t sectors;

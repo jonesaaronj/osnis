@@ -42,11 +42,20 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
         memcpy(discInfo->table + (sector * SECTOR_SIZE), data, SECTOR_SIZE);
     } 
 
-    // if this is not a shrunken image the key issuer will be in sector 0x0A at byte 0x140
+    // if this is not a shrunken image the encrypt info will be in sector 0x0A
+    // the issuer is at byte 0x140
+    // the key is at byte 0x1bf
+    // the iv is at byte 0x1dc
     else if (!discInfo->isShrunken && discInfo->isWII && sector == 0x0A) {
         size_t issuerLength = strlen((const char *) data + 0x140);
         discInfo->issuer = calloc(1, issuerLength + 1);
         memcpy(discInfo->issuer, data + 0x140, issuerLength);
+
+        discInfo->titleKey = calloc(1, 16);
+        memcpy(discInfo->titleKey, data + 0x1bf)
+
+        discInfo->iv = calloc(1, 16);
+        memcpy(discInfo->iv, data + 0x1dc)
     }
 
     // the actual disk info is either in the first sector of a regular image
@@ -226,7 +235,16 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     fprintf(stderr, "Disc Id: %.*s\n", 6, discInfo->discId);
     fprintf(stderr, "Disc Name: %s\n", discInfo->discName);
     fprintf(stderr, "Disc Number: %d\n", discInfo->discNumber);
-    if (discInfo->isWII) fprintf(stderr, "Disc Issuer: %s\n", discInfo->issuer);
+    
+    if (discInfo->isWII) {
+        fprintf(stderr, "Disc Issuer: %s\n", discInfo->issuer);
+        fprintf(stderr, "Title Key: ");
+        printChar(discInfo->titleKey, 16);
+        fprintf(stderr, "\n");
+        fprintf(stderr, "IV: ", discInfo->iv);
+        printChar(discInfo->iv, 16);
+        fprintf(stderr, "\n");
+    }
 
     uint32_t prevCrc = 0;
 
