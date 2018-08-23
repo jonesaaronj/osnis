@@ -43,12 +43,10 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
     } 
 
     // if this is not a shrunken image the key issuer will be in sector 0x0A at byte 0x140
-    else if (!discInfo->isShrunken && sector == 0x09) {
-        fprintf(stderr, "Getting Issuer\n");
+    else if (!discInfo->isShrunken && discInfo->isWII && sector == 0x0A) {
         size_t issuerLength = strlen((const char *) data + 0x140);
         discInfo->issuer = calloc(1, issuerLength + 1);
         memcpy(discInfo->issuer, data + 0x140, issuerLength);
-        fprintf(stderr, "Issuer %s\n", discInfo->issuer);
     }
 
     // the actual disk info is either in the first sector of a regular image
