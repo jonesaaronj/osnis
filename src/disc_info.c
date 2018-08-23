@@ -43,9 +43,9 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
     } 
 
     // if this is not a shrunken image the key issuer will be in sector 0x0A at byte 0x140
-    else if (!discInfo->isShrunken && sector == 0x0A) {
+    else if (!discInfo->isShrunken && sector == 0x09) {
         discInfo->issuer = calloc(1, 26 + 1);
-        memcpy(discInfo->discName, data + 0x140, 26);
+        memcpy(discInfo->issuer, data + 0x140, 26);
     }
 
     // the actual disk info is either in the first sector of a regular image
