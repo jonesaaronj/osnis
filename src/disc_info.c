@@ -8,8 +8,7 @@
 
 void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
 {
-    bool isShrunken = memcmp(SHRUNKEN_MAGIC_WORD, data, 5) == 0;
-    discInfo->isShrunken |= isShrunken;
+    discInfo->isShrunken |= memcmp(SHRUNKEN_MAGIC_WORD, data, 5) == 0;
 
     // if the first sector has the shrunken keyword
     if (sector == 0 && discInfo->isShrunken) {
@@ -42,6 +41,13 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
     else if (discInfo->isShrunken && 0 < sector && sector < discInfo->tableSectors) {
         memcpy(discInfo->table + (sector * SECTOR_SIZE), data, SECTOR_SIZE);
     } 
+
+    // if this is not a shrunken image the key issuer will be in sector 0x0A at byte 0x140
+    else if (!discInfo->isShrunken && sector == 0x0A) {
+        size_t issuerLength = strlen((const char *) data + 0x140);
+        discInfo->issuer = calloc(1, issuerLength + 1);
+        memcpy(discInfo->discName, data + 0x140, issuerLength);
+    }
 
     // the actual disk info is either in the first sector of a regular image
     // or the sector after the partition table in a shrunken image
@@ -105,9 +111,11 @@ struct DiscInfo * profileImage(char *file)
     size_t read;
     while((read = fread(buffer, 1, SECTOR_SIZE, f)) == SECTOR_SIZE) {
 
+        getDiscInfo(discInfo, buffer, sector);
+        
         // get the disc info from the first block
         if (sector == 0) {
-            getDiscInfo(discInfo, buffer, sector);
+            
             if (discInfo->isShrunken) {
                 sector++;
                 continue;
@@ -190,7 +198,7 @@ struct DiscInfo * profileImage(char *file)
     } else if(discInfo->isWII && sector == WII_SECTOR_NUM) {
         memset(discInfo->table + 6, WII_SECTOR_NUM, 1);
         memset(discInfo->table + 7, WII_DISC, 1);
-        discInfo->tableSectors = WII_SECTOR_NUM;
+        discInfo->tableSectors = WII_SECTOR_PT;
         discInfo->sectors = WII_SECTOR_NUM;
     } else if(discInfo->isGC && sector == GC_SECTOR_NUM) {
         memset(discInfo->table + 6, GC_SECTOR_PT, 1);
@@ -222,6 +230,7 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     fprintf(stderr, "Disc Id: %.*s\n", 6, discInfo->discId);
     fprintf(stderr, "Disc Name: %s\n", discInfo->discName);
     fprintf(stderr, "Disc Number: %d\n", discInfo->discNumber);
+    fprintf(stderr, "Disc Issuer: %s\n", discInfo->issuer);
 
     uint32_t prevCrc = 0;
 

@@ -12,6 +12,8 @@
 // 0xZZ is the number of sectors of the partition table
 static const unsigned char SHRUNKEN_MAGIC_WORD[8] = {'O','S','N','I','S',0x00,0x00,0x00};
 
+static const char * issuer = "Root-CA00000002-XS00000006";
+
 static const unsigned char GC_MAGIC_WORD[] = {0xC2, 0x33, 0x9F, 0x3D};
 static const unsigned char WII_MAGIC_WORD[] = {0x5D, 0x1C, 0x9E, 0xA3};
 
@@ -36,6 +38,7 @@ struct DiscInfo
     unsigned char * discId;
     unsigned char discNumber;
     unsigned char * discName;
+    unsigned char * issuer;
     unsigned char * table;
     unsigned char tableSectors;
     size_t sectors;
