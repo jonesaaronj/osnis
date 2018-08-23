@@ -5,6 +5,7 @@
 #include "hash.h"
 #include "disc_info.h"
 #include "crc32.h"
+#include "aes.h"
 
 void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
 {
@@ -47,6 +48,7 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
     // the key is at byte 0x1bf
     // the iv is at byte 0x1dc
     else if (!discInfo->isShrunken && discInfo->isWII && sector == 0x0A) {
+        // get the issuer 
         size_t issuerLength = strlen((const char *) data + 0x140);
         discInfo->issuer = calloc(1, issuerLength + 1);
         memcpy(discInfo->issuer, data + 0x140, issuerLength);
@@ -55,7 +57,13 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
         memcpy(discInfo->titleKey, data + 0x1bf, 16);
 
         discInfo->iv = calloc(1, 16);
-        memcpy(discInfo->iv, data + 0x1dc, 16);
+        memcpy(discInfo->iv, data + 0x1dc, 8);
+
+        // decrypt the title key
+        // todo: use key based on issuer
+        struct AES_ctx ctx;
+        AES_init_ctx_iv(&ctx, keyA, discInfo->iv);
+        AES_ECB_decrypt(&ctx, discInfo->titleKey);
     }
 
     // the actual disk info is either in the first sector of a regular image
