@@ -114,12 +114,9 @@ struct DiscInfo * profileImage(char *file)
         getDiscInfo(discInfo, buffer, sector);
         
         // get the disc info from the first block
-        if (sector == 0) {
-            
-            if (discInfo->isShrunken) {
-                sector++;
-                continue;
-            }
+        if (sector == 0 && discInfo->isShrunken) {
+            sector++;
+            continue;
         }
 
         // if the first block has the shrunken magic word this 
@@ -127,7 +124,6 @@ struct DiscInfo * profileImage(char *file)
         // table and the disc info will be in the next few sectors
         else if (discInfo->isShrunken) {
             if (sector <= discInfo->tableSectors) {
-                getDiscInfo(discInfo, buffer, sector);
                 sector++;
                 continue;
             } else {
