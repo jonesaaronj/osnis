@@ -12,6 +12,8 @@
 // 0xZZ is the number of sectors of the partition table
 static const unsigned char SHRUNKEN_MAGIC_WORD[8] = {'O','S','N','I','S',0x00,0x00,0x00};
 
+static const unsigned char ISSUER_MAGIC_WORD[] = "Root-CA";
+
 static const unsigned char issuer[] = "Root-CA00000002-XS00000006";
 static const unsigned char keyA[] = { 0xeb,0xe4,0x2a,0x22,0x5e,0x85,0x93,0xe4,0x48,0xd9,0xc5,0x45,0x73,0x81,0xaa,0xf7 };
 static const unsigned char keyB[] = { 0xa1,0x60,0x4a,0x6a,0x71,0x23,0xb5,0x29,0xae,0x8b,0xec,0x32,0xc8,0x16,0xfc,0xaa };
@@ -42,6 +44,7 @@ struct DiscInfo
     unsigned char discNumber;
     unsigned char * discName;
     
+    bool isEncrypted;
     unsigned char * issuer;
     unsigned char * titleKey;
     unsigned char * iv;

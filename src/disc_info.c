@@ -47,23 +47,27 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
     // the issuer is at byte 0x140
     // the key is at byte 0x1bf
     // the iv is at byte 0x1dc
-    else if (!discInfo->isShrunken && discInfo->isWII && sector == 0x0A) {
-        // get the issuer 
-        size_t issuerLength = strlen((const char *) data + 0x140);
-        discInfo->issuer = calloc(1, issuerLength + 1);
-        memcpy(discInfo->issuer, data + 0x140, issuerLength);
+    else if (!discInfo->isShrunken && discInfo->isWII) {
 
-        discInfo->titleKey = calloc(1, 16);
-        memcpy(discInfo->titleKey, data + 0x1bf, 16);
+        if (memcmp(ISSUER_MAGIC_WORD, data + 0x140, 7) == 0) {
+            fprintf(stderr, "Saw encrypted partition at sector %ld\n", sector);
+            // get the issuer 
+            size_t issuerLength = strlen((const char *) data + 0x140);
+            discInfo->issuer = calloc(1, issuerLength + 1);
+            memcpy(discInfo->issuer, data + 0x140, issuerLength);
 
-        discInfo->iv = calloc(1, 16);
-        memcpy(discInfo->iv, data + 0x1dc, 8);
+            discInfo->titleKey = calloc(1, 16);
+            memcpy(discInfo->titleKey, data + 0x1bf, 16);
 
-        // decrypt the title key
-        // todo: use key based on issuer
-        struct AES_ctx ctx;
-        AES_init_ctx_iv(&ctx, keyA, discInfo->iv);
-        AES_ECB_decrypt(&ctx, discInfo->titleKey);
+            discInfo->iv = calloc(1, 16);
+            memcpy(discInfo->iv, data + 0x1dc, 8);
+
+            // decrypt the title key
+            // todo: use key based on issuer
+            struct AES_ctx ctx;
+            AES_init_ctx_iv(&ctx, keyA, discInfo->iv);
+            AES_CBC_decrypt_buffer(&ctx, discInfo->titleKey, 16);
+        }
     }
 
     // the actual disk info is either in the first sector of a regular image
@@ -161,6 +165,11 @@ struct DiscInfo * profileImage(char *file)
         // if (SECTOR_SIZE/10 < same && same < SECTOR_SIZE) fprintf(stderr, "%ld EMPTY SAME: %d\n", sector, same);
         //fprintf(stderr, "%ld EMPTY SAME: %f\n", sector, same);
         //}
+
+        // check if this block is encrypted, i.e. not uniform
+        if(isUniform(buffer + 0x26C, 20) == NULL) {
+            discInfo->isEncrypted = true;
+        }
 
         // check if this is a junk block
         if (memcmp(buffer, junk + ((sector % JUNK_SECTOR_SIZE) * SECTOR_SIZE), read) == 0) {
