@@ -47,37 +47,37 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
     // the issuer is at byte 0x140
     // the key is at byte 0x1bf
     // the iv is at byte 0x1dc
-    else if (!discInfo->isShrunken && discInfo->isWII) {
-        if (memcmp(ISSUER_MAGIC_WORD, data + 0x140, 7) == 0) {
-            fprintf(stderr, "Saw encrypted partition at sector %ld\n", sector);
-            // get the issuer
-            size_t issuerLength = strlen((const char *) data + 0x140);
-            discInfo->issuer = calloc(1, issuerLength + 1);
-            memcpy(discInfo->issuer, data + 0x140, issuerLength);
+    else if (!discInfo->isShrunken && discInfo->isWII && memcmp(ISSUER_MAGIC_WORD, data + 0x140, 7) == 0) {
 
-            discInfo->titleKey = calloc(1, 16);
-            memcpy(discInfo->titleKey, data + 0x1bf, 16);
+        // get the issuer
+        size_t issuerLength = strlen((const char *) data + 0x140);
+        discInfo->issuer = calloc(1, issuerLength + 1);
+        memcpy(discInfo->issuer, data + 0x140, issuerLength);
 
-            discInfo->iv = calloc(1, 16);
-            memcpy(discInfo->iv, data + 0x1dc, 8);
+        discInfo->titleKey = calloc(1, 16);
+        memcpy(discInfo->titleKey, data + 0x1bf, 16);
 
-            discInfo->isKorean = data[0x1f1] == 1;
+        discInfo->iv = calloc(1, 16);
+        memcpy(discInfo->iv, data + 0x1dc, 8);
 
-            // decrypt the title key
-            // todo: use key based on issuer
-            struct AES_ctx ctx;
-            AES_init_ctx_iv(&ctx, keyA, discInfo->iv);
-            AES_CBC_decrypt_buffer(&ctx, discInfo->titleKey, 16);
+        discInfo->isKorean = data[0x1f1] == 1;
+        discInfo->isNewKey = true;
 
-            fprintf(stderr, "Disc Issuer: %s\n", discInfo->issuer);
-            fprintf(stderr, "Is Korean: %s\n", discInfo->isKorean ? "true" : "false");
-            fprintf(stderr, "Title Key: ");
-            printChar(discInfo->titleKey, 16);
-            fprintf(stderr, "\n");
-            fprintf(stderr, "IV: ");
-            printChar(discInfo->iv, 16);
-            fprintf(stderr, "\n");
-        }
+        // decrypt the title key
+        // todo: use key based on issuer
+        struct AES_ctx ctx;
+        AES_init_ctx_iv(&ctx, keyA, discInfo->iv);
+        AES_CBC_decrypt_buffer(&ctx, discInfo->titleKey, 16);
+
+        fprintf(stderr, "Saw encrypted partition at sector %ld\n", sector);
+        fprintf(stderr, "Disc Issuer: %s\n", discInfo->issuer);
+        fprintf(stderr, "Is Korean: %s\n", discInfo->isKorean ? "true" : "false");
+        fprintf(stderr, "Title Key: ");
+        printChar(discInfo->titleKey, 16);
+        fprintf(stderr, "\n");
+        fprintf(stderr, "IV: ");
+        printChar(discInfo->iv, 16);
+        fprintf(stderr, "\n");
     }
 
     // the actual disk info is either in the first sector of a regular image
@@ -131,6 +131,8 @@ struct DiscInfo * profileImage(char *file)
 
     struct DiscInfo *discInfo = calloc(sizeof(struct DiscInfo), 1);
 
+    struct AES_ctx ctx;
+
     // Do all of our reading in blocks the size of our sector
     // unsigned char * empty = calloc(1, SECTOR_SIZE);
     unsigned char * buffer = calloc(1, SECTOR_SIZE);
@@ -142,9 +144,6 @@ struct DiscInfo * profileImage(char *file)
     size_t sector = 0;
     size_t read;
     while((read = fread(buffer, 1, SECTOR_SIZE, f)) == SECTOR_SIZE) {
-
-        // make a copy to use for encryption
-        memcpy(crypto, buffer, SECTOR_SIZE);
 
         getDiscInfo(discInfo, buffer, sector);
         
@@ -180,13 +179,39 @@ struct DiscInfo * profileImage(char *file)
         //fprintf(stderr, "%ld EMPTY SAME: %f\n", sector, same);
         //}
 
-        // check if this block is encrypted, i.e. not uniform
-        if(isUniform(buffer + 0x26C, 20) == NULL) {
-            discInfo->isEncrypted = true;
+        // on a new key reinitialize the aes
+        if (discInfo->isNewKey) {
+            AES_init_ctx_iv(&ctx, discInfo->titleKey, discInfo->iv);
+            discInfo->isNewKey = false;
         }
 
+        // if we have a title key try decrypting the block of data and see if it is junk or oos
+        if (discInfo->titleKey != NULL && discInfo->iv != NULL) {
+            // make a copy to use for encryption
+            memcpy(crypto, buffer, SECTOR_SIZE);
+            AES_CBC_decrypt_buffer(&ctx, discInfo->titleKey, SECTOR_SIZE);
+        }
+
+        // check if this is an encrypted junk block
+        if (memcmp(crypto, junk + ((sector % JUNK_SECTOR_SIZE) * SECTOR_SIZE), read) == 0) {
+            // Write ffs to the partition table for the address
+            memcpy(discInfo->table + ((sector + 1) * 8), &FFs, 3);
+
+            // get the crc of the junk block and copy it to the table
+            uint32_t crc = crc32(junk + ((sector % JUNK_SECTOR_SIZE) * SECTOR_SIZE), read, 0);
+            memcpy(discInfo->table + ((sector + 1) * 8) + 4, &crc, 4);
+        }
+
+        // check if this is an encrypted block of repeated junk byte
+        else if((repeatByte = isUniform(crypto, read)) != NULL) {
+            // write our repeated byte to the partition table
+            memcpy(discInfo->table + ((sector + 1) * 8), &FEs, 3);
+
+            memcpy(discInfo->table + ((sector + 1) * 8) + 7, repeatByte, 1);
+        }
+        
         // check if this is a junk block
-        if (memcmp(buffer, junk + ((sector % JUNK_SECTOR_SIZE) * SECTOR_SIZE), read) == 0) {
+        else if (memcmp(buffer, junk + ((sector % JUNK_SECTOR_SIZE) * SECTOR_SIZE), read) == 0) {
             // Write ffs to the partition table for the address
             memcpy(discInfo->table + ((sector + 1) * 8), &FFs, 4);
 
@@ -199,17 +224,12 @@ struct DiscInfo * profileImage(char *file)
         else if((repeatByte = isUniform(buffer, read)) != NULL) {
             // write our repeated byte to the partition table
             memcpy(discInfo->table + ((sector + 1) * 8), &FEs, 4);
+
             memcpy(discInfo->table + ((sector + 1) * 8) + 7, repeatByte, 1);
         }
 
         // If this is not a junk block then it is a data block
         else {
-
-            // if this is not the block with the key and a key is set try decrypting the block
-            if (discInfo->titleKey != NULL && memcmp(ISSUER_MAGIC_WORD, buffer + 0x140, 7) != 0) {
-
-            }
-
             // get the crc of the block
             uint32_t crc = crc32(buffer, read, 0);
 
@@ -223,6 +243,9 @@ struct DiscInfo * profileImage(char *file)
             memcpy(discInfo->table + ((sector + 1) * 8), &dataSector, 4);
             memcpy(discInfo->table + ((sector + 1) * 8) + 4, &crc, 4);
         }
+
+        memset(buffer, 0x0, SECTOR_SIZE);
+        memset(crypto, 0x0, SECTOR_SIZE);
         sector++;
     }
     fclose(f);
@@ -273,21 +296,13 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     fprintf(stderr, "Disc Name: %s\n", discInfo->discName);
     fprintf(stderr, "Disc Number: %d\n", discInfo->discNumber);
     
-    if (discInfo->isWII) {
-        // fprintf(stderr, "Disc Issuer: %s\n", discInfo->issuer);
-        // fprintf(stderr, "Title Key: ");
-        // printChar(discInfo->titleKey, 16);
-        // fprintf(stderr, "\n");
-        // fprintf(stderr, "IV: ");
-        // printChar(discInfo->iv, 16);
-        // fprintf(stderr, "\n");
-    }
-
     uint32_t prevCrc = 0;
 
     int dataCount = 0;
     int generatedJunkCount = 0;
+    int encryptedGeneratedJunkCount = 0;
     int repeatJunkCount = 0;
+    int encryptedRepeatJunkCount = 0;
     int repeatSector = 0;
     
     fprintf(stderr, "Sectors %ld\n", discInfo->sectors);
@@ -301,30 +316,86 @@ void printDiscInfo(struct DiscInfo * discInfo) {
             break;
         }
 
-        // if you see FF address this is a junk block
-        else if (memcmp(&FFs, discInfo->table + (sector * 8), 4) == 0) {
+        // if you see 4 FF address this is a junk block
+        else if (memcmp(&FFs, discInfo->table + (sector * 8), 3) == 0) {
             if (dataCount > 0){
                 fprintf(stderr, "%05d blocks of data\n", dataCount);
                 dataCount = 0;
             }
+            if (encryptedGeneratedJunkCount > 0){
+                fprintf(stderr, "%05d blocks of encrypted junk\n", encryptedGeneratedJunkCount);
+                encryptedGeneratedJunkCount = 0;
+            }
             if (repeatJunkCount > 0){
-                fprintf(stderr, "%05d blocks of repeat\n", repeatJunkCount);
+                fprintf(stderr, "%05d blocks of repeat junk\n", repeatJunkCount);
                 repeatJunkCount = 0;
+            }
+            if (encryptedRepeatJunkCount > 0){
+                fprintf(stderr, "%05d blocks of encrypted repeat\n", encryptedRepeatJunkCount);
+                encryptedRepeatJunkCount = 0;
             }
             generatedJunkCount++;
         }
-
-        // if you see 0xFE address this is a repeat block
-        else if (memcmp(&FEs, discInfo->table + (sector * 8), 4) == 0) {
-            if (generatedJunkCount > 0) {
-                fprintf(stderr, "%05d blocks of junk\n", generatedJunkCount);
-                generatedJunkCount = 0;
-            }
+        // if you see 3 FF address this is an encrypted junk block
+        else if (memcmp(&FFs, discInfo->table + (sector * 8), 3) == 0) {
             if (dataCount > 0){
                 fprintf(stderr, "%05d blocks of data\n", dataCount);
                 dataCount = 0;
             }
+            if (generatedJunkCount > 0) {
+                fprintf(stderr, "%05d blocks of generated junk\n", generatedJunkCount);
+                generatedJunkCount = 0;
+            }
+            if (repeatJunkCount > 0){
+                fprintf(stderr, "%05d blocks of repeat junk\n", repeatJunkCount);
+                repeatJunkCount = 0;
+            }
+            if (encryptedRepeatJunkCount > 0){
+                fprintf(stderr, "%05d blocks of encrypted repeat\n", encryptedRepeatJunkCount);
+                encryptedRepeatJunkCount = 0;
+            }
+            encryptedGeneratedJunkCount++;
+        }
+
+        // if you see 4 0xFE address this is a repeat block
+        else if (memcmp(&FEs, discInfo->table + (sector * 8), 4) == 0) {
+            if (dataCount > 0){
+                fprintf(stderr, "%05d blocks of data\n", dataCount);
+                dataCount = 0;
+            }
+            if (generatedJunkCount > 0) {
+                fprintf(stderr, "%05d blocks of generated junk\n", generatedJunkCount);
+                generatedJunkCount = 0;
+            }
+            if (encryptedGeneratedJunkCount > 0){
+                fprintf(stderr, "%05d blocks of encrypted junk\n", encryptedGeneratedJunkCount);
+                encryptedGeneratedJunkCount = 0;
+            }
+            if (encryptedRepeatJunkCount > 0){
+                fprintf(stderr, "%05d blocks of encrypted repeat\n", encryptedRepeatJunkCount);
+                encryptedRepeatJunkCount = 0;
+            }
             repeatJunkCount++;
+        }
+        // if you see 3 0xFE address this is an encrypted repeat block
+        else if (memcmp(&FEs, discInfo->table + (sector * 8), 4) == 0) {
+            if (dataCount > 0){
+                fprintf(stderr, "%05d blocks of data\n", dataCount);
+                dataCount = 0;
+            }
+            if (generatedJunkCount > 0) {
+                fprintf(stderr, "%05d blocks of generated junk\n", generatedJunkCount);
+                generatedJunkCount = 0;
+            }
+            if (encryptedGeneratedJunkCount > 0){
+                fprintf(stderr, "%05d blocks of encrypted junk\n", encryptedGeneratedJunkCount);
+                encryptedGeneratedJunkCount = 0;
+            }
+            if (repeatJunkCount > 0){
+                fprintf(stderr, "%05d blocks of repeat junk\n", repeatJunkCount);
+                repeatJunkCount = 0;
+            }
+            encryptedRepeatJunkCount++;
         }
 
         // we are a data block
@@ -333,9 +404,17 @@ void printDiscInfo(struct DiscInfo * discInfo) {
                 fprintf(stderr, "%05d blocks of generated junk\n", generatedJunkCount);
                 generatedJunkCount = 0;
             }
+            if (encryptedGeneratedJunkCount > 0){
+                fprintf(stderr, "%05d blocks of encrypted junk\n", encryptedGeneratedJunkCount);
+                encryptedGeneratedJunkCount = 0;
+            }
             if (repeatJunkCount > 0){
                 fprintf(stderr, "%05d blocks of repeat junk\n", repeatJunkCount);
                 repeatJunkCount = 0;
+            }
+            if (encryptedRepeatJunkCount > 0){
+                fprintf(stderr, "%05d blocks of encrypted repeat\n", encryptedRepeatJunkCount);
+                encryptedRepeatJunkCount = 0;
             }
 
             // see if we are a repeated data block
@@ -353,8 +432,14 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     if (generatedJunkCount > 0) {
         fprintf(stderr, "%05d blocks of generated junk\n", generatedJunkCount);
     }
+    if (encryptedGeneratedJunkCount > 0) {
+        fprintf(stderr, "%05d blocks of encrypted generated junk\n", encryptedGeneratedJunkCount);
+    }
     if (repeatJunkCount > 0) {
-        fprintf(stderr, "%05d blocks of repeat junk\n", repeatJunkCount);
+        fprintf(stderr, "%05d blocks of repeat\n", repeatJunkCount);
+    }
+    if (encryptedRepeatJunkCount > 0) {
+        fprintf(stderr, "%05d blocks of encrypted repeat\n", encryptedRepeatJunkCount);
     }
     if (repeatSector > 0) {
         fprintf(stderr, "%05d blocks of repeated data\n", repeatSector);
