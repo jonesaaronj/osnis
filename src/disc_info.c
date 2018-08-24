@@ -48,10 +48,9 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
     // the key is at byte 0x1bf
     // the iv is at byte 0x1dc
     else if (!discInfo->isShrunken && discInfo->isWII) {
-
         if (memcmp(ISSUER_MAGIC_WORD, data + 0x140, 7) == 0) {
             fprintf(stderr, "Saw encrypted partition at sector %ld\n", sector);
-            // get the issuer 
+            // get the issuer
             size_t issuerLength = strlen((const char *) data + 0x140);
             discInfo->issuer = calloc(1, issuerLength + 1);
             memcpy(discInfo->issuer, data + 0x140, issuerLength);
@@ -62,6 +61,8 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
             discInfo->iv = calloc(1, 16);
             memcpy(discInfo->iv, data + 0x1dc, 8);
 
+            discInfo->isKorean = data[0x1f1] == 1;
+
             // decrypt the title key
             // todo: use key based on issuer
             struct AES_ctx ctx;
@@ -69,6 +70,7 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
             AES_CBC_decrypt_buffer(&ctx, discInfo->titleKey, 16);
 
             fprintf(stderr, "Disc Issuer: %s\n", discInfo->issuer);
+            fprintf(stderr, "Is Korean: %s\n", discInfo->isKorean ? "true" : "false");
             fprintf(stderr, "Title Key: ");
             printChar(discInfo->titleKey, 16);
             fprintf(stderr, "\n");
@@ -132,6 +134,7 @@ struct DiscInfo * profileImage(char *file)
     // Do all of our reading in blocks the size of our sector
     // unsigned char * empty = calloc(1, SECTOR_SIZE);
     unsigned char * buffer = calloc(1, SECTOR_SIZE);
+    unsigned char * crypto = calloc(1, SECTOR_SIZE);
     unsigned char * junk = calloc(1, JUNK_BLOCK_SIZE);
     unsigned char * repeatByte;
     uint32_t prevCrc = 0;
@@ -139,6 +142,9 @@ struct DiscInfo * profileImage(char *file)
     size_t sector = 0;
     size_t read;
     while((read = fread(buffer, 1, SECTOR_SIZE, f)) == SECTOR_SIZE) {
+
+        // make a copy to use for encryption
+        memcpy(crypto, buffer, SECTOR_SIZE);
 
         getDiscInfo(discInfo, buffer, sector);
         
@@ -198,6 +204,12 @@ struct DiscInfo * profileImage(char *file)
 
         // If this is not a junk block then it is a data block
         else {
+
+            // if this is not the block with the key and a key is set try decrypting the block
+            if (discInfo->titleKey != NULL && memcmp(ISSUER_MAGIC_WORD, buffer + 0x140, 7) != 0) {
+
+            }
+
             // get the crc of the block
             uint32_t crc = crc32(buffer, read, 0);
 

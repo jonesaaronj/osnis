@@ -45,6 +45,7 @@ struct DiscInfo
     unsigned char * discName;
     
     bool isEncrypted;
+    bool isKorean;
     unsigned char * issuer;
     unsigned char * titleKey;
     unsigned char * iv;
