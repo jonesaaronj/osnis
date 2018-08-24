@@ -67,6 +67,14 @@ void getDiscInfo(struct DiscInfo *discInfo, unsigned char data[], size_t sector)
             struct AES_ctx ctx;
             AES_init_ctx_iv(&ctx, keyA, discInfo->iv);
             AES_CBC_decrypt_buffer(&ctx, discInfo->titleKey, 16);
+
+            fprintf(stderr, "Disc Issuer: %s\n", discInfo->issuer);
+            fprintf(stderr, "Title Key: ");
+            printChar(discInfo->titleKey, 16);
+            fprintf(stderr, "\n");
+            fprintf(stderr, "IV: ");
+            printChar(discInfo->iv, 16);
+            fprintf(stderr, "\n");
         }
     }
 
@@ -254,13 +262,13 @@ void printDiscInfo(struct DiscInfo * discInfo) {
     fprintf(stderr, "Disc Number: %d\n", discInfo->discNumber);
     
     if (discInfo->isWII) {
-        fprintf(stderr, "Disc Issuer: %s\n", discInfo->issuer);
-        fprintf(stderr, "Title Key: ");
-        printChar(discInfo->titleKey, 16);
-        fprintf(stderr, "\n");
-        fprintf(stderr, "IV: ");
-        printChar(discInfo->iv, 16);
-        fprintf(stderr, "\n");
+        // fprintf(stderr, "Disc Issuer: %s\n", discInfo->issuer);
+        // fprintf(stderr, "Title Key: ");
+        // printChar(discInfo->titleKey, 16);
+        // fprintf(stderr, "\n");
+        // fprintf(stderr, "IV: ");
+        // printChar(discInfo->iv, 16);
+        // fprintf(stderr, "\n");
     }
 
     uint32_t prevCrc = 0;
